@@ -1,52 +1,53 @@
-import React, { useState, useEffect, useRef } from 'react';
-import styled, { keyframes } from 'styled-components';
+import React, { useState } from 'react';
+import styled, { keyframes, createGlobalStyle } from 'styled-components';
 
-// 1. 타입 및 데이터 정의
-type Category = '전체' | '웹사이트' | 'AI' | '포스터' | '디자인';
+// 1. 전역 스타일: body에 그라데이션을 직접 입혀서 양옆 '남색 기둥'을 없앰
+const GlobalStyle = createGlobalStyle`
+  * {
+    box-sizing: border-box;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100vh;
+    /* 화면 전체에 그라데이션을 깔아버려서 경계를 없앰 */
+    background: linear-gradient(180deg, #243f91 0%, #591782 40%, #2c0f50 100%) fixed;
+    color: white;
+    font-family: 'Inter', sans-serif;
+  }
+`;
+
+type Category = '전체' | '앱' | '웹' | '디자인' | '게임';
 
 const DATA = Array.from({ length: 12 }).map((_, i) => ({
   id: i + 1,
-  category: (['웹사이트', 'AI', '포스터', '디자인'][i % 4]) as Category,
-  title: `PROJECT 0${i + 1}`,
-  img: `https://picsum.photos/seed/${i + 100}/600/400`
+  category: (['앱', '웹', '디자인', '게임'][i % 4]) as Category,
+  title: `PROJECT ${i + 1}`,
+  img: `https://picsum.photos/seed/${i + 125}/1200/800`
 }));
 
-// 무한 회전 애니메이션 정의
 const scroll = keyframes`
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 `;
 
-const App: React.FC = () => {
+const App = () => {
   const [tab, setTab] = useState<Category>('전체');
   const filtered = tab === '전체' ? DATA : DATA.filter(d => d.category === tab);
-  
-  // 무한 캐러셀을 위한 트랙 ref
-  const trackRef = useRef<HTMLDivElement>(null);
-
-  // 무한 캐러셀 애니메이션 재설정 (데이터 변경 시 대응)
-  useEffect(() => {
-    if (trackRef.current) {
-      const track = trackRef.current;
-      track.style.animation = 'none';
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      trackRef.current.offsetHeight; // 트리거
-      track.style.animation = `scroll 60s linear infinite`; // 속도 조절
-    }
-  }, [tab]); // 카테고리 탭 변경 시 애니메이션 재설정
 
   return (
-    <Container>
-      {/* 1. 상단 섹션 */}
-      <HeaderSection>
-        {/* [상단 1] 로고 - 이미지 중앙 배치 */}
+    <>
+      <GlobalStyle />
+      <Container>
+        {/* [상단 1] 로고 - 노트북 화면 꽉 차게 더 크게 */}
         <Header>
-          <LogoImage src="/artifact-logo.png" alt="ARTIFACT" />
+          <Logo src="/artifact-logo.png" alt="ARTIFACT" />
         </Header>
 
-        {/* [상단 2] 카테고리 버튼 - 중앙 배치 */}
+        {/* [상단 2] 카테고리 탭 - 크기 확대 */}
         <Nav>
-          {['전체', '웹사이트', 'AI', '포스터', '디자인'].map(c => (
+          {['전체', '앱', '웹', '디자인', '게임'].map(c => (
             <TabButton 
               key={c}
               $active={tab === c}
@@ -56,36 +57,36 @@ const App: React.FC = () => {
             </TabButton>
           ))}
         </Nav>
-      </HeaderSection>
 
-      {/* 2. 중단 섹션: 무한 회전형(Infinite Carousel) */}
-      <CarouselWrapper>
-        <InfiniteTrack ref={trackRef}>
-          {/* 무한 느낌을 위해 데이터를 두 번 반복 출력합니다 */}
-          {[...DATA, ...DATA].map((item, index) => (
-            <CarouselItem key={`${item.id}-${index}`}>
-              <img src={item.img} alt={item.title} />
-            </CarouselItem>
+        {/* [중단] 자동 회전 배너 - 여백 시원하게 조절 */}
+        <CarouselSection>
+          <InfiniteTrack>
+            {[...DATA, ...DATA].map((item, i) => (
+              <CarouselCard key={`${item.id}-${i}`}>
+                <img src={item.img} alt="carousel" />
+                <div className="label">Carousel {item.id}</div>
+              </CarouselCard>
+            ))}
+          </InfiniteTrack>
+        </CarouselSection>
+
+        {/* [하단] 그리드 - 배경 투명화로 경계선 제거 */}
+        <GridMain>
+          {filtered.map(item => (
+            <GridItem key={item.id}>
+              <div className="image-box">
+                <img src={item.img} alt={item.title} />
+                <div className="card-info">
+                  <span className="cat">{item.category}</span>
+                  <span className="id">ID: {String(item.id).padStart(2, '0')}</span>
+                </div>
+              </div>
+              <div className="title-label">{item.title}</div>
+            </GridItem>
           ))}
-        </InfiniteTrack>
-      </CarouselWrapper>
-
-      {/* 3. 하단 섹션: 3열 4행 그리드 */}
-      <GridMain>
-        {filtered.map(item => (
-          <GridCard key={item.id}>
-            <CardInfo>
-              <span>{item.category}</span>
-              <span>ID: 0{item.id}</span>
-            </CardInfo>
-            <ImageWrapper>
-              <img src={item.img} alt={item.title} />
-            </ImageWrapper>
-            <CardTitle>{item.title}</CardTitle>
-          </GridCard>
-        ))}
-      </GridMain>
-    </Container>
+        </GridMain>
+      </Container>
+    </>
   );
 };
 
@@ -94,171 +95,111 @@ export default App;
 // --- Styled Components ---
 
 const Container = styled.div`
-  min-height: 100vh;
-  /* 이미지 배경색 반영: 어두운 보라색/남색 */
-  background-color: #0d0f1a;
-  color: white;
   width: 100%;
-  margin: 0;
-  padding: 0;
-  font-family: 'Inter', sans-serif;
-  overflow-x: hidden;
+  /* Container 자체 배경을 없애서 body의 배경이 보이게 함 */
+  background: transparent;
   display: flex;
   flex-direction: column;
-  align-items: center; /* 로고와 카테고리를 중앙으로 */
-`;
-
-const HeaderSection = styled.div`
-  width: 100%;
-  max-width: 1200px; /* 상단 섹션 너비 제한 */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 40px 20px; /* 상단 여백 추가 */
 `;
 
 const Header = styled.header`
-  margin-bottom: 30px;
+  padding: 100px 60px 40px; /* 로고 상단 여백 확대 */
   display: flex;
-  justify-content: center; /* 로고 중앙 정렬 */
-  width: 100%;
+  justify-content: flex-start;
 `;
 
-const LogoImage = styled.img`
-  height: 50px; /* 로고 크기 적절히 조절 */
+const Logo = styled.img`
+  height: 200px; /* 로고를 훨씬 더 크게 키움 */
   width: auto;
   object-fit: contain;
 `;
 
 const Nav = styled.nav`
   display: flex;
-  justify-content: center; /* 카테고리 중앙 정렬 */
-  gap: 15px; /* 카테고리 버튼 간격 조절 */
-  width: 100%;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 100px;
 `;
 
 const TabButton = styled.button<{ $active: boolean }>`
-  padding: 8px 20px;
-  font-size: 13px;
-  border-radius: 30px;
-  border: 1px solid ${props => props.$active ? '#cc0000' : 'rgba(255,255,255,0.2)'};
-  cursor: pointer;
-  transition: 0.3s ease;
-  background-color: ${props => props.$active ? '#cc0000' : 'transparent'};
+  padding: 18px 50px;
+  border-radius: 60px;
+  border: 2px solid ${props => props.$active ? '#ff4d4d' : 'rgba(255,255,255,0.3)'};
+  background: ${props => props.$active ? '#ff4d4d' : 'transparent'};
   color: white;
-  white-space: nowrap;
-
-  &:hover {
-    border-color: #cc0000;
-  }
+  font-size: 24px; /* 버튼 글자 크기 대폭 확대 */
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.3s;
 `;
 
-const CarouselWrapper = styled.section`
+const CarouselSection = styled.section`
   width: 100%;
   overflow: hidden;
-  margin-bottom: 60px;
-  position: relative;
-  /* 캐러셀 양옆에 페이드 효과 추가 (선택 사항) */
-  &::before, &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    width: 100px;
-    height: 100%;
-    z-index: 2;
-  }
-  &::before { left: 0; background: linear-gradient(to right, #0d0f1a, transparent); }
-  &::after { right: 0; background: linear-gradient(to left, #0d0f1a, transparent); }
+  margin-bottom: 80px;
 `;
 
 const InfiniteTrack = styled.div`
   display: flex;
   width: max-content;
-  gap: 20px; /* 캐러셀 아이템 간격 조절 */
-  /* 애니메이션 설정 (useEffect에서 제어) */
-  animation: none; 
-  padding: 20px 0;
-
-  &:hover {
-    animation-play-state: paused; /* 마우스 올리면 멈춤 */
-  }
+  gap: 40px; /* 배너 사이 여백 시원하게 */
+  animation: ${scroll} 60s linear infinite;
 `;
 
-const CarouselItem = styled.div`
-  width: 350px; /* 캐러셀 카드 크기 적절히 조절 */
+const CarouselCard = styled.div`
+  width: 600px;
   aspect-ratio: 16 / 9;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  flex-shrink: 0;
-  cursor: pointer;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    filter: grayscale(80%);
-    transition: 0.5s ease;
+  position: relative;
+  img { 
+    width: 100%; 
+    height: 100%; 
+    object-fit: cover; 
+    border-radius: 30px; /* 둥근 모서리 강조 */
   }
-  
-  &:hover img {
-    filter: grayscale(0%);
-    transform: scale(1.03);
-  }
+  .label { position: absolute; bottom: 25px; left: 30px; font-size: 16px; }
 `;
 
 const GridMain = styled.main`
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3열 배치 */
-  gap: 40px 20px; /* 그리드 간격 조절 */
+  grid-template-columns: repeat(3, 1fr); 
   width: 100%;
-  max-width: 1200px; /* 그리드 섹션 너비 제한 (여백 생성) */
-  padding: 0 20px 100px;
-  margin: 0 auto; /* 중앙 정렬 */
+  gap: 60px; /* 프로젝트 칸 사이 여백 확대 */
+  padding: 0 60px 150px;
 `;
 
-const GridCard = styled.div`
+const GridItem = styled.div`
   display: flex;
   flex-direction: column;
-  cursor: pointer;
-`;
-
-const CardInfo = styled.div`
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  color: #888;
-  margin-bottom: 8px;
-`;
-
-const ImageWrapper = styled.div`
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  background-color: #111;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px; /* 이미지wrapper에도 둥근 모서리 적용 */
-  overflow: hidden;
-  transition: 0.3s ease;
-
-  ${GridCard}:hover & {
-    border-color: #cc0000;
-  }
-
-  img {
+  background: transparent; /* 배경을 투명하게 해서 경계 제거 */
+  
+  .image-box {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
-    filter: grayscale(50%);
-    transition: 0.4s ease;
-  }
-`;
+    aspect-ratio: 16 / 11;
+    overflow: hidden;
+    position: relative;
+    
+    img { 
+      width: 100%; 
+      height: 100%; 
+      object-fit: cover; 
+      border-radius: 30px; 
+      transition: 0.5s;
+    }
+    &:hover img { transform: scale(1.04); }
 
-const CardTitle = styled.div`
-  margin-top: 15px;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 500;
-  color: #ccc;
-  letter-spacing: 0.5px;
-  text-transform: uppercase; /* 제목 대문자 변환 */
+    .card-info {
+      position: absolute;
+      top: 25px; left: 30px; right: 30px;
+      display: flex; justify-content: space-between;
+      font-size: 16px; font-weight: bold;
+    }
+  }
+
+  .title-label {
+    padding: 30px 0;
+    text-align: center;
+    font-size: 24px; /* 프로젝트 이름 시원하게 확대 */
+    font-weight: 700;
+    background: transparent; /* 글자 배경 검은 선 제거 */
+  }
 `;
