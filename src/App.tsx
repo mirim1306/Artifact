@@ -35,10 +35,10 @@ interface Project {
 
 const DATA: Project[] = [
   {
-    id: 1, category: ['앱'], title: 'task flow (운세 iOS 앱)', subTitle: '(운세 iOS 앱)',
-    img: '/task flow.png', logo: '/artifact-logo.png',
-    description: '사용자의 운세와 일정을 결합하여 최적의 흐름을 제안하는 서비스입니다.',
-    url: 'https://taskflow-woad-pi.vercel.app/'
+    id: 1, category: ['앱'], title: 'monster baseball', subTitle: '(숫자 야구 앱)',
+    img: '/monster-baseball.png', logo: '/artifact-logo.png',
+    description: '숨겨진 3자리 숫자를 유추하여 맞추는 몬스터 숫자야구 게임입니다.',
+    url: 'https://jgj1020.github.io/monster-baseball-game/'
   },
   {
     id: 2, category: ['앱'], title: 'Meal_App (급식 iOS 앱)', subTitle: '(급식 iOS 앱)',
