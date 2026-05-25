@@ -1,0 +1,48 @@
+const API_URL = 'http://localhost:4000';
+
+// ── 공통 fetch 함수 ───────────────────────────────────────────
+const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
+  const token = localStorage.getItem('token');
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options.headers,
+  };
+  const res = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+  return res.json();
+};
+
+// ── 회원 API ──────────────────────────────────────────────────
+export const authAPI = {
+  checkUsername: (username: string) => fetchAPI(`/api/check-username/${username}`),
+  register: (data: { username: string; password: string; nickname: string; email: string }) =>
+    fetchAPI('/api/register', { method: 'POST', body: JSON.stringify(data) }),
+  login: (data: { username: string; password: string }) =>
+    fetchAPI('/api/login', { method: 'POST', body: JSON.stringify(data) }),
+  me: () => fetchAPI('/api/me'),
+};
+
+// ── 포트폴리오 API ────────────────────────────────────────────
+export const portfolioAPI = {
+  getAll: (category?: string) =>
+    fetchAPI(`/api/portfolios${category && category !== '전체' ? `?category=${category}` : ''}`),
+  getOne: (id: number) => fetchAPI(`/api/portfolios/${id}`),
+  getMyPortfolios: () => fetchAPI('/api/my/portfolios'),
+  create: (formData: FormData) => {
+    const token = localStorage.getItem('token');
+    return fetch(`${API_URL}/api/portfolios`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    }).then(res => res.json());
+  },
+  update: (id: number, formData: FormData) => {
+    const token = localStorage.getItem('token');
+    return fetch(`${API_URL}/api/portfolios/${id}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    }).then(res => res.json());
+  },
+  delete: (id: number) => fetchAPI(`/api/portfolios/${id}`, { method: 'DELETE' }),
+};
