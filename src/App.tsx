@@ -47,7 +47,7 @@ interface User {
 
 const DATA: Project[] = [
   {
-    id: 1, category: ['앱'], title: 'monster baseball', subTitle: '(숫자 야구 앱)',
+    id: 1, category: ['앱', '게임'], title: 'monster baseball', subTitle: '(숫자 야구 앱)',
     img: '/monster-baseball.png', logo: '/artifact-logo.png',
     description: '숨겨진 3자리 숫자를 유추하여 맞추는 몬스터 숫자야구 게임입니다.',
     url: 'https://jgj1020.github.io/monster-baseball-game/'
