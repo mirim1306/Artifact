@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import styled, { keyframes, css } from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { portfolioAPI } from '../Api';
 
 interface RegisterPageProps {
@@ -7,54 +7,77 @@ interface RegisterPageProps {
   onSuccess: () => void;
 }
 
+type Category = '웹' | '앱' | '게임' | '디자인';
+
 const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
+  const [mainImageFile, setMainImageFile] = useState<File | null>(null);
+  const [extraImageFiles, setExtraImageFiles] = useState<File[]>([]);
+  const [extraImagePreviews, setExtraImagePreviews] = useState<string[]>([]);
 
   const [form, setForm] = useState({
     title: '',
-    description: '',
-    category: '웹',
-    run_link: '',
-    file_link: '',
-    github_link: '',
+    one_line_desc: '',
+    detail_desc: '',
+    two_line_desc: '',
+    service_intro: '',
+    main_features: '',
+    tech_environment: '',
     team_members: '',
-    tech_stack: '',
     dev_period: '',
+    github_link: '',
     is_public: 'true',
+    category: '웹' as Category,
+    // 웹/게임
+    run_link: '',
+    // 게임
+    file_link: '',
+    // 앱
+    store_link: '',
+    // 디자인
+    design_tool: '',
   });
-  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMainImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      setMainImageFile(file);
+      setMainImagePreview(URL.createObjectURL(file));
     }
+  };
+
+  const handleExtraImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setExtraImageFiles(prev => [...prev, ...files]);
+    setExtraImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
+  };
+
+  const removeExtraImage = (index: number) => {
+    setExtraImageFiles(prev => prev.filter((_, i) => i !== index));
+    setExtraImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
     if (!form.title || !form.category) {
       setError('제목과 카테고리는 필수입니다.');
       return;
     }
-
     setLoading(true);
     const formData = new FormData();
     Object.entries(form).forEach(([key, value]) => formData.append(key, value));
-    if (imageFile) formData.append('main_image', imageFile);
+    if (mainImageFile) formData.append('main_image', mainImageFile);
+    extraImageFiles.forEach(f => formData.append('extra_images', f));
 
     const res = await portfolioAPI.create(formData);
     setLoading(false);
-
     if (res.success) {
       alert('포트폴리오가 등록되었습니다!');
       onSuccess();
@@ -65,66 +88,131 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
 
   return (
     <Container>
-      <BackButton onClick={onBack}>← 돌아가기</BackButton>
-      <Title>포트폴리오 등록</Title>
+      <Header>
+        <BackButton onClick={onBack}>← 돌아가기</BackButton>
+        <Title>포트폴리오 등록</Title>
+      </Header>
 
       <Form onSubmit={handleSubmit}>
         {error && <ErrorMsg>{error}</ErrorMsg>}
 
+        {/* ── 기본 정보 ── */}
         <Section>
           <SectionTitle>기본 정보</SectionTitle>
 
+          <Row>
+            <Col>
+              <Label>카테고리 <Required>*</Required></Label>
+              <Select name="category" value={form.category} onChange={handleChange}>
+                <option value="웹">웹</option>
+                <option value="앱">앱</option>
+                <option value="게임">게임</option>
+                <option value="디자인">디자인</option>
+              </Select>
+            </Col>
+            <Col>
+              <Label>공개 여부</Label>
+              <Select name="is_public" value={form.is_public} onChange={handleChange}>
+                <option value="true">공개</option>
+                <option value="false">비공개</option>
+              </Select>
+            </Col>
+          </Row>
+
           <Label>메인 이미지</Label>
-          <ImageUploadBox onClick={() => document.getElementById('imageInput')?.click()}>
-            {imagePreview
-              ? <PreviewImg src={imagePreview} alt="preview" />
-              : <UploadPlaceholder>🖼️ 클릭하여 이미지 업로드</UploadPlaceholder>
+          <ImageUploadBox onClick={() => document.getElementById('mainImageInput')?.click()}>
+            {mainImagePreview
+              ? <PreviewImg src={mainImagePreview} alt="preview" />
+              : <UploadPlaceholder>🖼️ 클릭하여 메인 이미지 업로드</UploadPlaceholder>
             }
           </ImageUploadBox>
-          <input id="imageInput" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageChange} />
+          <input id="mainImageInput" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleMainImage} />
 
           <Label>제목 <Required>*</Required></Label>
           <Input name="title" placeholder="프로젝트 제목" value={form.title} onChange={handleChange} />
 
-          <Label>설명</Label>
-          <Textarea name="description" placeholder="프로젝트 설명을 입력하세요" value={form.description} onChange={handleChange} rows={4} />
+          <Label>한 줄 설명 <Hint>(최대 30자)</Hint></Label>
+          <Input name="one_line_desc" placeholder="작품을 한 줄로 설명해주세요" value={form.one_line_desc} maxLength={30} onChange={handleChange} />
+          <CharCount>{form.one_line_desc.length}/30</CharCount>
 
-          <Label>카테고리 <Required>*</Required></Label>
-          <Select name="category" value={form.category} onChange={handleChange}>
-            <option value="웹">웹</option>
-            <option value="앱">앱</option>
-            <option value="게임">게임</option>
-            <option value="디자인">디자인</option>
-          </Select>
+          <Label>작품 설명 <Hint>(줄당 35자 이내, 최대 5줄)</Hint></Label>
+          <Textarea name="detail_desc" placeholder="작품 설명을 입력하세요" value={form.detail_desc} rows={5} onChange={handleChange} />
 
-          <Label>공개 여부</Label>
-          <Select name="is_public" value={form.is_public} onChange={handleChange}>
-            <option value="true">공개</option>
-            <option value="false">비공개</option>
-          </Select>
+          <Label>두 줄 설명 <Hint>(줄당 35자 이내)</Hint></Label>
+          <Textarea name="two_line_desc" placeholder="두 줄로 설명해주세요" value={form.two_line_desc} rows={2} onChange={handleChange} />
+
+          <Label>서비스 소개 <Hint>(줄당 35자 이내)</Hint></Label>
+          <Textarea name="service_intro" placeholder="서비스를 소개해주세요" value={form.service_intro} rows={4} onChange={handleChange} />
+
+          <Label>주요 기능 <Hint>(줄당 35자 이내)</Hint></Label>
+          <Textarea name="main_features" placeholder="주요 기능을 입력해주세요" value={form.main_features} rows={4} onChange={handleChange} />
         </Section>
 
+        {/* ── 카테고리별 링크 ── */}
         <Section>
-          <SectionTitle>링크 정보</SectionTitle>
+          <SectionTitle>
+            {form.category === '웹' && '웹 서비스 정보'}
+            {form.category === '앱' && '앱 정보'}
+            {form.category === '게임' && '게임 실행 정보'}
+            {form.category === '디자인' && '디자인 정보'}
+          </SectionTitle>
 
-          <Label>실행 링크 (웹 서비스 URL)</Label>
-          <Input name="run_link" placeholder="https://..." value={form.run_link} onChange={handleChange} />
+          {form.category === '웹' && (
+            <>
+              <Label>실행 링크 (웹 URL)</Label>
+              <Input name="run_link" placeholder="https://..." value={form.run_link} onChange={handleChange} />
+            </>
+          )}
 
-          <Label>실행 파일 링크 (다운로드 URL)</Label>
-          <Input name="file_link" placeholder="https://github.com/.../releases/..." value={form.file_link} onChange={handleChange} />
+          {form.category === '앱' && (
+            <>
+              <Label>앱스토어 / 플레이스토어 링크</Label>
+              <Input name="store_link" placeholder="https://apps.apple.com/... 또는 https://play.google.com/..." value={form.store_link} onChange={handleChange} />
+            </>
+          )}
+
+          {form.category === '게임' && (
+            <>
+              <Label>실행 파일 링크 (exe 다운로드)</Label>
+              <Input name="file_link" placeholder="https://github.com/.../releases/..." value={form.file_link} onChange={handleChange} />
+              <Label>웹 게임 링크 <Hint>(웹 게임인 경우)</Hint></Label>
+              <Input name="run_link" placeholder="https://..." value={form.run_link} onChange={handleChange} />
+            </>
+          )}
+
+          {form.category === '디자인' && (
+            <>
+              <Label>사용 툴</Label>
+              <Input name="design_tool" placeholder="Figma, Photoshop, Illustrator..." value={form.design_tool} onChange={handleChange} />
+              <Label>추가 이미지 <Hint>(제한 없음)</Hint></Label>
+              <ExtraImageGrid>
+                {extraImagePreviews.map((src, i) => (
+                  <ExtraImageItem key={i}>
+                    <img src={src} alt={`extra-${i}`} />
+                    <RemoveBtn onClick={() => removeExtraImage(i)}>✕</RemoveBtn>
+                  </ExtraImageItem>
+                ))}
+                <AddImageBox onClick={() => document.getElementById('extraImageInput')?.click()}>
+                  + 이미지 추가
+                </AddImageBox>
+              </ExtraImageGrid>
+              <input id="extraImageInput" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleExtraImages} />
+            </>
+          )}
 
           <Label>GitHub 링크</Label>
           <Input name="github_link" placeholder="https://github.com/..." value={form.github_link} onChange={handleChange} />
         </Section>
 
+        {/* ── 추가 정보 ── */}
         <Section>
           <SectionTitle>추가 정보</SectionTitle>
 
+          <Label>개발 기술 / 환경 <Hint>(핵심 기술 먼저, 최대 10개)</Hint></Label>
+          <Input name="tech_environment" placeholder="React, Node.js, PostgreSQL..." value={form.tech_environment} onChange={handleChange} />
+
           <Label>팀원</Label>
           <Input name="team_members" placeholder="홍길동, 김철수" value={form.team_members} onChange={handleChange} />
-
-          <Label>기술 스택</Label>
-          <Input name="tech_stack" placeholder="React, Node.js, PostgreSQL" value={form.tech_stack} onChange={handleChange} />
 
           <Label>개발 기간</Label>
           <Input name="dev_period" placeholder="2024.01 ~ 2024.03" value={form.dev_period} onChange={handleChange} />
@@ -146,147 +234,124 @@ const fadeIn = keyframes`
 `;
 
 const Container = styled.div`
-  min-height: 100vh;
-  max-width: 700px;
+  max-width: 800px;
   margin: 0 auto;
-  padding: 80px 40px;
+  padding: 40px 40px 100px;
   animation: ${fadeIn} 0.4s ease;
 `;
 
+const Header = styled.div`
+  margin-bottom: 32px;
+`;
+
 const BackButton = styled.button`
-  background: none;
-  border: none;
-  color: rgba(255,255,255,0.6);
-  font-size: 16px;
-  cursor: pointer;
-  margin-bottom: 30px;
-  display: block;
+  background: none; border: none;
+  color: rgba(255,255,255,0.6); font-size: 15px;
+  cursor: pointer; margin-bottom: 12px; display: block;
   &:hover { color: white; }
 `;
 
 const Title = styled.h1`
-  font-size: 36px;
-  font-weight: 800;
-  margin-bottom: 40px;
+  font-size: 32px; font-weight: 800; margin: 0;
   background: linear-gradient(135deg, #7b2cbf, #ff85a1);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 `;
 
-const Form = styled.form`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
+const Form = styled.form` display: flex; flex-direction: column; gap: 16px; `;
 
 const Section = styled.div`
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 20px;
-  padding: 24px;
-  margin-bottom: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  border-radius: 20px; padding: 24px;
+  display: flex; flex-direction: column; gap: 8px;
 `;
 
 const SectionTitle = styled.h3`
-  font-size: 16px;
-  font-weight: 700;
-  color: #ff85a1;
-  margin-bottom: 8px;
-  letter-spacing: 1px;
+  font-size: 15px; font-weight: 700; color: #ff85a1;
+  margin: 0 0 12px; letter-spacing: 1px; text-transform: uppercase;
 `;
+
+const Row = styled.div` display: flex; gap: 16px; `;
+const Col = styled.div` flex: 1; display: flex; flex-direction: column; gap: 8px; `;
 
 const Label = styled.label`
-  font-size: 14px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.8);
-  margin-top: 8px;
+  font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8); margin-top: 8px;
 `;
 
+const Hint = styled.span` color: rgba(255,255,255,0.4); font-weight: 400; font-size: 12px; `;
 const Required = styled.span` color: #ff85a1; `;
 
+const CharCount = styled.span`
+  font-size: 12px; color: rgba(255,255,255,0.4); text-align: right;
+`;
+
 const Input = styled.input`
-  padding: 12px 16px;
-  border-radius: 12px;
+  padding: 11px 14px; border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.08);
-  color: white;
-  font-size: 15px;
-  outline: none;
+  background: rgba(255,255,255,0.08); color: white; font-size: 14px; outline: none;
   &::placeholder { color: rgba(255,255,255,0.3); }
   &:focus { border-color: #7b2cbf; }
 `;
 
 const Textarea = styled.textarea`
-  padding: 12px 16px;
-  border-radius: 12px;
+  padding: 11px 14px; border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.08);
-  color: white;
-  font-size: 15px;
-  outline: none;
-  resize: vertical;
-  font-family: inherit;
+  background: rgba(255,255,255,0.08); color: white; font-size: 14px; outline: none;
+  resize: vertical; font-family: inherit;
   &::placeholder { color: rgba(255,255,255,0.3); }
   &:focus { border-color: #7b2cbf; }
 `;
 
 const Select = styled.select`
-  padding: 12px 16px;
-  border-radius: 12px;
+  padding: 11px 14px; border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(30,30,60,0.9);
-  color: white;
-  font-size: 15px;
-  outline: none;
-  cursor: pointer;
+  background: rgba(30,30,60,0.9); color: white; font-size: 14px; outline: none; cursor: pointer;
   &:focus { border-color: #7b2cbf; }
 `;
 
 const ImageUploadBox = styled.div`
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: 16px;
-  border: 2px dashed rgba(255,255,255,0.2);
-  cursor: pointer;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: 0.3s;
+  width: 100%; aspect-ratio: 16 / 9; border-radius: 14px;
+  border: 2px dashed rgba(255,255,255,0.2); cursor: pointer;
+  overflow: hidden; display: flex; align-items: center; justify-content: center; transition: 0.3s;
   &:hover { border-color: #7b2cbf; }
 `;
 
-const PreviewImg = styled.img`
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+const PreviewImg = styled.img` width: 100%; height: 100%; object-fit: cover; `;
+const UploadPlaceholder = styled.div` color: rgba(255,255,255,0.4); font-size: 15px; `;
+
+const ExtraImageGrid = styled.div`
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 4px;
 `;
 
-const UploadPlaceholder = styled.div`
-  color: rgba(255,255,255,0.4);
-  font-size: 16px;
+const ExtraImageItem = styled.div`
+  position: relative; aspect-ratio: 1;
+  border-radius: 10px; overflow: hidden;
+  img { width: 100%; height: 100%; object-fit: cover; }
+`;
+
+const RemoveBtn = styled.button`
+  position: absolute; top: 4px; right: 4px;
+  background: rgba(0,0,0,0.6); border: none; color: white;
+  border-radius: 50%; width: 22px; height: 22px;
+  font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+`;
+
+const AddImageBox = styled.div`
+  aspect-ratio: 1; border-radius: 10px;
+  border: 2px dashed rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.4); font-size: 13px; cursor: pointer;
+  &:hover { border-color: #7b2cbf; color: white; }
 `;
 
 const SubmitButton = styled.button`
-  padding: 16px;
-  border-radius: 16px;
-  border: none;
+  padding: 16px; border-radius: 14px; border: none;
   background: linear-gradient(135deg, #7b2cbf, #ff85a1);
-  color: white;
-  font-size: 18px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s;
-  margin-top: 8px;
+  color: white; font-size: 17px; font-weight: 700; cursor: pointer; transition: all 0.3s;
   &:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(123,44,191,0.4); }
   &:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 `;
 
 const ErrorMsg = styled.p`
-  color: #ff6b6b;
-  font-size: 14px;
-  text-align: center;
+  color: #ff6b6b; font-size: 14px; text-align: center; margin: 0;
 `;
