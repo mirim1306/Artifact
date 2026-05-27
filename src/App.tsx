@@ -4,6 +4,7 @@ import ProjectDetail from './components/ProjectDetail';
 import AuthPage from './components/Authpage';
 import RegisterPage from './components/Registerpage';
 import MyPage from './components/Mypage';
+import { portfolioAPI } from './Api';
 
 const GlobalStyle = createGlobalStyle`
   * { box-sizing: border-box; }
@@ -25,13 +26,15 @@ type NavTab = 'home' | 'register' | 'mypage';
 
 interface Project {
   id: number;
-  category: Category[];
+  category: string;
   title: string;
-  subTitle?: string;
-  img: string;
-  logo?: string;
-  description?: string;
-  url?: string;
+  main_image: string;
+  one_line_desc?: string;
+  run_link?: string;
+  file_link?: string;
+  store_link?: string;
+  is_public: boolean;
+  nickname?: string;
 }
 
 interface User {
@@ -42,30 +45,31 @@ interface User {
   created_at?: string;
 }
 
-const DATA: Project[] = [
-  { id: 1, category: ['앱'], title: 'monster baseball', subTitle: '(숫자 야구 앱)', img: '/monster-baseball.png', logo: '/artifact-logo.png', description: '숨겨진 3자리 숫자를 유추하여 맞추는 몬스터 숫자야구 게임입니다.', url: 'https://jgj1020.github.io/monster-baseball-game/' },
-  { id: 2, category: ['앱'], title: 'Meal_App (급식 iOS 앱)', subTitle: '(급식 iOS 앱)', img: '/Meal_App.png', logo: '/artifact-logo.png', description: '전국 학교의 급식 정보를 한눈에 확인하고 영양 정보를 체크할 수 있습니다.', url: 'https://jgj1020.github.io/meal_app/' },
-  { id: 3, category: ['게임'], title: '슈퍼 알까기', subTitle: '알까기 게임', img: '/슈퍼_알까기-게임.png', logo: '/artifact-logo.png', description: '고유 능력을 가진 알로 하는 2D 전략 알까기 게임입니다.', url: 'https://github.com/mirim1306/Algaki/releases/download/v1.0.0/algaki_installer.exe' },
-  { id: 4, category: ['웹', '게임'], title: '호냥이 대전쟁', subTitle: '라인 디펜스 게임', img: '/호냥이_대전쟁-웹.png', logo: '/artifact-logo.png', description: '귀여운 호냥이들이 적의 침략을 막아내는 라인 디펜스 게임입니다.', url: 'https://mirim1306.github.io/java-script-project2/' },
-  { id: 5, category: ['게임'], title: '레인보우 홀덤', subTitle: '홀덤 카드 게임', img: '/레인보우_홀덤-게임.png', logo: '/artifact-logo.png', description: '1~10까지의 카드를 활용한 심리전 전략 카드 게임입니다.', url: 'https://github.com/mirim1306/java-project2/releases/download/v1.0.0/rainbow_holdem_installer.exe' },
-  { id: 6, category: ['게임'], title: '체스 카드 배틀', subTitle: '체스 카드 게임', img: '/체스카드-게임.png', logo: '/artifact-logo.png', description: '전통적인 체스와 카드 게임의 결합으로 이루어진 새로운 전략 게임입니다.', url: 'https://github.com/mirim1306/python-project/releases/download/v1.0.0/chesscardgame_installer.exe' },
-  { id: 7, category: ['웹'], title: 'Match mood', subTitle: '감정 매칭 웹사이트', img: '/Match_mood.png', logo: '/artifact-logo.png', description: '사용자의 감정을 분석하여 비슷한 취미를 가진 사용자와 매칭해주는 웹사이트입니다.', url: 'https://match-mood.onrender.com' },
-  { id: 8, category: ['웹'], title: '자기소개 웹사이트', subTitle: '개인 브랜딩 웹사이트', img: '/자기소개 웹사이트.png', logo: '/artifact-logo.png', description: '개인의 역량과 경험을 효과적으로 표현할 수 있는 자기소개 웹사이트입니다.', url: 'https://jgj1020.github.io/HTML-pr/' },
-  { id: 9, category: ['앱', '웹', '게임'], title: '오목까기', subTitle: '고전적인 게임인 오목과 알까기의 결합으로 이루어진 전략 게임', img: '/오목까기-웹.png', logo: '/artifact-logo.png', description: '고전적인 오목과 알까기의 결합으로 이루어진 전략 게임입니다.', url: 'https://mirim1306.github.io/omokkkagi/' }
-];
-
 const App = () => {
   const [tab, setTab] = useState<Category>('전체');
   const [navTab, setNavTab] = useState<NavTab>('home');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [showAuth, setShowAuth] = useState(false);
+  const [portfolios, setPortfolios] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
     if (token && savedUser) setUser(JSON.parse(savedUser));
   }, []);
+
+  useEffect(() => {
+    if (navTab === 'home') fetchPortfolios();
+  }, [navTab, tab]);
+
+  const fetchPortfolios = async () => {
+    setLoading(true);
+    const res = await portfolioAPI.getAll(tab === '전체' ? undefined : tab);
+    if (res.success) setPortfolios(res.portfolios);
+    setLoading(false);
+  };
 
   const handleLogin = (userData: User, token: string) => {
     setUser(userData);
@@ -99,8 +103,6 @@ const App = () => {
     setSelectedProject(null);
   };
 
-  const filtered = tab === '전체' ? DATA : DATA.filter(d => d.category.includes(tab));
-
   if (showAuth) return (
     <>
       <GlobalStyle />
@@ -113,7 +115,7 @@ const App = () => {
       return <ProjectDetail project={selectedProject} onBack={() => setSelectedProject(null)} />;
     }
     if (navTab === 'register') {
-      return <RegisterPage onBack={() => setNavTab('home')} onSuccess={() => setNavTab('mypage')} />;
+      return <RegisterPage onBack={() => setNavTab('home')} onSuccess={() => { setNavTab('home'); fetchPortfolios(); }} />;
     }
     if (navTab === 'mypage' && user) {
       return <MyPage user={user} onBack={() => setNavTab('home')} onRegister={() => setNavTab('register')} />;
@@ -125,28 +127,42 @@ const App = () => {
             <TabButton key={c} $active={tab === c} onClick={() => setTab(c)}>{c}</TabButton>
           ))}
         </Nav>
+
         <CarouselSection>
           <InfiniteTrack>
-            {[...DATA, ...DATA].map((item, i) => (
-              <CarouselCard key={i}><img src={item.img} alt="carousel" /></CarouselCard>
+            {[...portfolios, ...portfolios].map((item, i) => (
+              <CarouselCard key={i}>
+                <img src={item.main_image ? `http://localhost:4000${item.main_image}` : '/artifact-logo.png'} alt="carousel" />
+              </CarouselCard>
             ))}
           </InfiniteTrack>
         </CarouselSection>
+
         <GridMain>
-          {filtered.map(item => (
-            <GridItem key={item.id} onDoubleClick={() => setSelectedProject(item)}>
-              <div className="image-box">
-                <img src={item.img} alt={item.title} />
-                <div className="card-info">
-                  <span className="cat">{item.category.join(' / ')}</span>
-                  <span className="id">{String(item.id).padStart(2, '0')}</span>
+          {loading ? (
+            <LoadingText>불러오는 중...</LoadingText>
+          ) : portfolios.length === 0 ? (
+            <EmptyText>등록된 포트폴리오가 없어요.</EmptyText>
+          ) : (
+            portfolios.map(item => (
+              <GridItem key={item.id} onDoubleClick={() => setSelectedProject(item)}>
+                <div className="image-box">
+                  <img
+                    src={item.main_image ? `http://localhost:4000${item.main_image}` : '/artifact-logo.png'}
+                    alt={item.title}
+                  />
+                  <div className="card-info">
+                    <span className="cat">{item.category}</span>
+                    <span className="id">{String(item.id).padStart(2, '0')}</span>
+                  </div>
+                  <div className="hover-tip">더블 클릭 하세요!</div>
                 </div>
-                <div className="hover-tip">더블 클릭 하세요!</div>
-              </div>
-              <div className="title-label">{item.title}</div>
-            </GridItem>
-          ))}
+                <div className="title-label">{item.title}</div>
+              </GridItem>
+            ))
+          )}
         </GridMain>
+
         <Footer>
           <FooterContent>
             <div className="info">
@@ -167,7 +183,6 @@ const App = () => {
     <>
       <GlobalStyle />
       <PageWrapper>
-        {/* 헤더 영역 - 스크롤 안 따라옴 */}
         <TopArea>
           <Header>
             <LogoWrapper>
@@ -193,7 +208,6 @@ const App = () => {
           </NavPanel>
         </TopArea>
 
-        {/* 컨텐츠 영역 - 탭에 따라 변경 */}
         <ContentArea>
           {renderContent()}
         </ContentArea>
@@ -296,6 +310,8 @@ const GridItem = styled.div`
   &:hover .hover-tip { opacity: 1; }
   .title-label { padding: 15px 5px; text-align: center; font-size: 18px; font-weight: 700; }
 `;
+const LoadingText = styled.div` grid-column: 1/-1; text-align: center; padding: 60px; color: rgba(255,255,255,0.5); font-size: 16px; `;
+const EmptyText = styled.div` grid-column: 1/-1; text-align: center; padding: 60px; color: rgba(255,255,255,0.4); font-size: 16px; `;
 const Footer = styled.footer` padding: 80px 60px; background: rgba(0, 0, 0, 0.3); border-top: 1px solid rgba(255, 255, 255, 0.05); `;
 const FooterContent = styled.div` max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; `;
 const GithubLink = styled.a` display: flex; align-items: center; gap: 12px; text-decoration: none; color: white; background: rgba(255, 255, 255, 0.1); padding: 12px 24px; border-radius: 12px; transition: 0.3s; font-weight: 600; &:hover { background: rgba(255, 255, 255, 0.2); transform: translateY(-3px); } `;
