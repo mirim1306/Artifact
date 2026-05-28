@@ -141,8 +141,8 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
   { name: 'extra_images', maxCount: 100 }
 ]), async (req, res) => {
   const {
-    title, category, one_line_desc, detail_desc, two_line_desc,
-    service_intro, main_features, tech_environment,
+    title, category, service_intro,
+    main_features, tech_environment,
     team_members, dev_period, github_link, is_public,
     run_link, file_link, store_link, design_tool
   } = req.body;
@@ -156,16 +156,16 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
   try {
     const result = await pool.query(
       `INSERT INTO portfolios 
-        (user_id, title, category, main_image, one_line_desc, detail_desc, two_line_desc,
-         service_intro, main_features, tech_environment, team_members, dev_period,
-         github_link, is_public, run_link, file_link, store_link, design_tool)
+        (user_id, title, category, main_image, service_intro,
+        main_features, tech_environment, team_members, dev_period,
+        github_link, is_public, run_link, file_link, store_link, design_tool)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
        RETURNING *`,
       [
         req.user.id, title, category, main_image,
-        one_line_desc || null, detail_desc || null, two_line_desc || null,
-        service_intro || null, main_features || null, tech_environment || null,
-        team_members || null, dev_period || null, github_link || null,
+        service_intro || null, main_features || null,
+        tech_environment || null, team_members || null,
+        dev_period || null, github_link || null,
         is_public === 'false' ? false : true,
         run_link || null, file_link || null, store_link || null, design_tool || null
       ]
@@ -194,8 +194,8 @@ app.put('/api/portfolios/:id', authMiddleware, upload.fields([
   { name: 'extra_images', maxCount: 100 }
 ]), async (req, res) => {
   const {
-    title, category, one_line_desc, detail_desc, two_line_desc,
-    service_intro, main_features, tech_environment,
+    title, category, service_intro,
+    main_features, tech_environment,
     team_members, dev_period, github_link, is_public,
     run_link, file_link, store_link, design_tool
   } = req.body;
@@ -209,16 +209,16 @@ app.put('/api/portfolios/:id', authMiddleware, upload.fields([
     const extra_images = req.files?.['extra_images'] || [];
 
     let query = `UPDATE portfolios SET 
-      title=$1, category=$2, one_line_desc=$3, detail_desc=$4, two_line_desc=$5,
-      service_intro=$6, main_features=$7, tech_environment=$8, team_members=$9,
-      dev_period=$10, github_link=$11, is_public=$12, run_link=$13, file_link=$14,
-      store_link=$15, design_tool=$16, updated_at=NOW()`;
+      title=$1, category=$2, service_intro=$3,
+      main_features=$4, tech_environment=$5, team_members=$6,
+      dev_period=$7, github_link=$8, is_public=$9, run_link=$10, file_link=$11,
+      store_link=$12, design_tool=$13, updated_at=NOW()`;
     
     const params = [
       title, category,
-      one_line_desc || null, detail_desc || null, two_line_desc || null,
-      service_intro || null, main_features || null, tech_environment || null,
-      team_members || null, dev_period || null, github_link || null,
+      service_intro || null, main_features || null,
+      tech_environment || null, team_members || null,
+      dev_period || null, github_link || null,
       is_public === 'false' ? false : true,
       run_link || null, file_link || null, store_link || null, design_tool || null
     ];

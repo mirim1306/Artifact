@@ -10,7 +10,7 @@ const GlobalStyle = createGlobalStyle`
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0; width: 100%; overflow-x: hidden;
-    background: linear-gradient(180deg, #35328a 0%, #173db9 40%, #000000 100%) no-repeat fixed;
+    background: linear-gradient(180deg, #252433 0%, #22242b 40%, #000000 100%) no-repeat fixed;
     color: white;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }

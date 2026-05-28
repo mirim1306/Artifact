@@ -129,8 +129,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
           <Label>제목 <Required>*</Required></Label>
           <Input name="title" placeholder="프로젝트 제목" value={form.title} onChange={handleChange} />
 
-          <Label>작품 설명</Label>
-          <Textarea name="detail_desc" placeholder="작품 설명을 입력하세요" value={form.detail_desc} rows={5} onChange={handleChange} />
           <Label>서비스 소개</Label>
           <Textarea name="service_intro" placeholder="서비스를 소개해주세요" value={form.service_intro} rows={4} onChange={handleChange} />
 
