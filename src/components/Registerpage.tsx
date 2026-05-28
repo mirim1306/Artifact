@@ -19,9 +19,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
 
   const [form, setForm] = useState({
     title: '',
-    one_line_desc: '',
     detail_desc: '',
-    two_line_desc: '',
     service_intro: '',
     main_features: '',
     tech_environment: '',
@@ -131,20 +129,12 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
           <Label>제목 <Required>*</Required></Label>
           <Input name="title" placeholder="프로젝트 제목" value={form.title} onChange={handleChange} />
 
-          <Label>한 줄 설명 <Hint>(최대 30자)</Hint></Label>
-          <Input name="one_line_desc" placeholder="작품을 한 줄로 설명해주세요" value={form.one_line_desc} maxLength={30} onChange={handleChange} />
-          <CharCount>{form.one_line_desc.length}/30</CharCount>
-
-          <Label>작품 설명 <Hint>(줄당 35자 이내, 최대 5줄)</Hint></Label>
+          <Label>작품 설명</Label>
           <Textarea name="detail_desc" placeholder="작품 설명을 입력하세요" value={form.detail_desc} rows={5} onChange={handleChange} />
-
-          <Label>두 줄 설명 <Hint>(줄당 35자 이내)</Hint></Label>
-          <Textarea name="two_line_desc" placeholder="두 줄로 설명해주세요" value={form.two_line_desc} rows={2} onChange={handleChange} />
-
-          <Label>서비스 소개 <Hint>(줄당 35자 이내)</Hint></Label>
+          <Label>서비스 소개</Label>
           <Textarea name="service_intro" placeholder="서비스를 소개해주세요" value={form.service_intro} rows={4} onChange={handleChange} />
 
-          <Label>주요 기능 <Hint>(줄당 35자 이내)</Hint></Label>
+          <Label>주요 기능</Label>
           <Textarea name="main_features" placeholder="주요 기능을 입력해주세요" value={form.main_features} rows={4} onChange={handleChange} />
         </Section>
 
@@ -208,7 +198,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
         <Section>
           <SectionTitle>추가 정보</SectionTitle>
 
-          <Label>개발 기술 / 환경 <Hint>(핵심 기술 먼저, 최대 10개)</Hint></Label>
+          <Label>개발 기술 / 환경</Label>
           <Input name="tech_environment" placeholder="React, Node.js, PostgreSQL..." value={form.tech_environment} onChange={handleChange} />
 
           <Label>팀원</Label>
@@ -280,10 +270,6 @@ const Label = styled.label`
 
 const Hint = styled.span` color: rgba(255,255,255,0.4); font-weight: 400; font-size: 12px; `;
 const Required = styled.span` color: #ff85a1; `;
-
-const CharCount = styled.span`
-  font-size: 12px; color: rgba(255,255,255,0.4); text-align: right;
-`;
 
 const Input = styled.input`
   padding: 11px 14px; border-radius: 10px;
