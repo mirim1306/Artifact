@@ -159,7 +159,7 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
         (user_id, title, category, main_image, service_intro,
         main_features, tech_environment, team_members, dev_period,
         github_link, is_public, run_link, file_link, store_link, design_tool)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
        RETURNING *`,
       [
         req.user.id, title, category, main_image,
