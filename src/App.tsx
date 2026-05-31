@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import styled, { keyframes, createGlobalStyle, css } from 'styled-components';
+import { useState, useEffect } from 'react';
+import styled, { createGlobalStyle, css } from 'styled-components';
 import ProjectDetail from './components/ProjectDetail';
 import AuthPage from './components/Authpage';
 import RegisterPage from './components/Registerpage';
@@ -14,11 +14,6 @@ const GlobalStyle = createGlobalStyle`
     color: white;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
-`;
-
-const scrollX = keyframes`
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
 `;
 
 type Category = '전체' | '앱' | '웹' | '디자인' | '게임';

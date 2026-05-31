@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import styled, { keyframes, createGlobalStyle } from 'styled-components';
 
 // 1. 전역 스타일: body에 그라데이션을 직접 입혀서 양옆 '남색 기둥'을 없앰
