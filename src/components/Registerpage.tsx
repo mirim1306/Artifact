@@ -14,8 +14,8 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
   const [error, setError] = useState('');
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
-  const [extraImageFiles, setExtraImageFiles] = useState<File[]>([]);
-  const [extraImagePreviews, setExtraImagePreviews] = useState<string[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [mediaPreviews, setMediaPreviews] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
 
   const [form, setForm] = useState({
     title: '',
@@ -50,15 +50,18 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
     }
   };
 
-  const handleExtraImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setExtraImageFiles(prev => [...prev, ...files]);
-    setExtraImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
-  };
+    setMediaFiles(prev => [...prev, ...files]);
+    setMediaPreviews(prev => [...prev, ...files.map(f => ({
+      url: URL.createObjectURL(f),
+      type: f.type.startsWith('video/') ? 'video' as const : 'image' as const
+    }))]);
+ };
 
-  const removeExtraImage = (index: number) => {
-    setExtraImageFiles(prev => prev.filter((_, i) => i !== index));
-    setExtraImagePreviews(prev => prev.filter((_, i) => i !== index));
+  const removeMedia = (index: number) => {
+    setMediaFiles(prev => prev.filter((_, i) => i !== index));
+    setMediaPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,7 +75,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
     const formData = new FormData();
     Object.entries(form).forEach(([key, value]) => formData.append(key, value));
     if (mainImageFile) formData.append('main_image', mainImageFile);
-    extraImageFiles.forEach(f => formData.append('extra_images', f));
+    mediaFiles.forEach(f => formData.append('media_files', f));
 
     const res = await portfolioAPI.create(formData);
     setLoading(false);
@@ -126,6 +129,23 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
           </ImageUploadBox>
           <input id="mainImageInput" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleMainImage} />
 
+          <Label>작품 영상 / 이미지 <Required>*</Required></Label>
+          <ExtraImageGrid>
+            {mediaPreviews.map((item, i) => (
+              <ExtraImageItem key={i}>
+                {item.type === 'video'
+                  ? <video src={item.url} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <img src={item.url} alt={`media-${i}`} />
+                }
+                <RemoveBtn type="button" onClick={() => removeMedia(i)}>✕</RemoveBtn>
+              </ExtraImageItem>
+            ))}
+            <AddImageBox onClick={() => document.getElementById('mediaInput')?.click()}>
+              + 영상/이미지 추가
+            </AddImageBox>
+          </ExtraImageGrid>
+          <input id="mediaInput" type="file" accept="image/*,video/*" multiple style={{ display: 'none' }} onChange={handleMediaFiles} />
+
           <Label>제목 <Required>*</Required></Label>
           <Input name="title" placeholder="프로젝트 제목" value={form.title} onChange={handleChange} />
 
@@ -172,19 +192,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
             <>
               <Label>사용 툴</Label>
               <Input name="design_tool" placeholder="Figma, Photoshop, Illustrator..." value={form.design_tool} onChange={handleChange} />
-              <Label>추가 이미지 <Hint>(제한 없음)</Hint></Label>
-              <ExtraImageGrid>
-                {extraImagePreviews.map((src, i) => (
-                  <ExtraImageItem key={i}>
-                    <img src={src} alt={`extra-${i}`} />
-                    <RemoveBtn onClick={() => removeExtraImage(i)}>✕</RemoveBtn>
-                  </ExtraImageItem>
-                ))}
-                <AddImageBox onClick={() => document.getElementById('extraImageInput')?.click()}>
-                  + 이미지 추가
-                </AddImageBox>
-              </ExtraImageGrid>
-              <input id="extraImageInput" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleExtraImages} />
+              <input id="extraImageInput" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleMediaFiles} />
             </>
           )}
 

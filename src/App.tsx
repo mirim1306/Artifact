@@ -53,6 +53,8 @@ const App = () => {
   const [showAuth, setShowAuth] = useState(false);
   const [portfolios, setPortfolios] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
+  const [featuredMedia, setFeaturedMedia] = useState<{media_url: string; media_type: string; title: string}[]>([]);
+  const [sliderIndex, setSliderIndex] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -67,7 +69,22 @@ const App = () => {
   const fetchPortfolios = async () => {
     setLoading(true);
     const res = await portfolioAPI.getAll(tab === '전체' ? undefined : tab);
-    if (res.success) setPortfolios(res.portfolios);
+    if (res.success) {
+      setPortfolios(res.portfolios);
+      // 각 포트폴리오의 미디어 가져오기
+      const mediaList: {media_url: string; media_type: string; title: string}[] = [];
+      for (const p of res.portfolios.slice(0, 5)) {
+        const detail = await portfolioAPI.getOne(p.id);
+        if (detail.success && detail.portfolio.media?.length > 0) {
+          mediaList.push({
+            ...detail.portfolio.media[0],
+            title: p.title
+          });
+        }
+      }
+      setFeaturedMedia(mediaList);
+      setSliderIndex(0);
+    }
     setLoading(false);
   };
 
@@ -128,15 +145,39 @@ const App = () => {
           ))}
         </Nav>
 
-        <CarouselSection>
-          <InfiniteTrack>
-            {[...portfolios, ...portfolios].map((item, i) => (
-              <CarouselCard key={i}>
-                <img src={item.main_image ? `http://localhost:4000${item.main_image}` : '/artifact-logo.png'} alt="carousel" />
-              </CarouselCard>
-            ))}
-          </InfiniteTrack>
-        </CarouselSection>
+        {featuredMedia.length > 0 && (
+          <SliderSection>
+            <SliderWrapper>
+              {featuredMedia[sliderIndex].media_type === 'video' ? (
+                <SliderVideo
+                  key={sliderIndex}
+                  src={`http://localhost:4000${featuredMedia[sliderIndex].media_url}`}
+                  autoPlay muted loop playsInline
+                />
+              ) : (
+                <SliderImage
+                  key={sliderIndex}
+                  src={`http://localhost:4000${featuredMedia[sliderIndex].media_url}`}
+                  alt={featuredMedia[sliderIndex].title}
+                />
+              )}
+              <SliderOverlay>
+                <SliderTitle>{featuredMedia[sliderIndex].title}</SliderTitle>
+              </SliderOverlay>
+              {featuredMedia.length > 1 && (
+                <>
+                  <SliderBtn $left onClick={() => setSliderIndex(i => (i - 1 + featuredMedia.length) % featuredMedia.length)}>‹</SliderBtn>
+                  <SliderBtn onClick={() => setSliderIndex(i => (i + 1) % featuredMedia.length)}>›</SliderBtn>
+                  <SliderDots>
+                    {featuredMedia.map((_, i) => (
+                      <Dot key={i} $active={i === sliderIndex} onClick={() => setSliderIndex(i)} />
+                    ))}
+                  </SliderDots>
+                </>
+              )}
+            </SliderWrapper>
+          </SliderSection>
+        )}
 
         <GridMain>
           {loading ? (
@@ -294,9 +335,6 @@ const TabButton = styled.button<{ $active: boolean }>`
     &:hover { background: rgba(255, 255, 255, 0.2); color: white; transform: translateY(-5px) scale(1.05); }
   `}
 `;
-const CarouselSection = styled.section` width: 100%; overflow: hidden; margin-bottom: 80px; `;
-const InfiniteTrack = styled.div` display: flex; width: max-content; gap: 25px; animation: ${scrollX} 60s linear infinite; `;
-const CarouselCard = styled.div` width: 400px; aspect-ratio: 16 / 9; img { width: 100%; height: 100%; object-fit: cover; border-radius: 24px; } `;
 const GridMain = styled.main` display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; padding: 0 60px 100px; `;
 const GridItem = styled.div`
   display: flex; flex-direction: column; cursor: pointer;
@@ -315,3 +353,40 @@ const EmptyText = styled.div` grid-column: 1/-1; text-align: center; padding: 60
 const Footer = styled.footer` padding: 80px 60px; background: rgba(0, 0, 0, 0.3); border-top: 1px solid rgba(255, 255, 255, 0.05); `;
 const FooterContent = styled.div` max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; `;
 const GithubLink = styled.a` display: flex; align-items: center; gap: 12px; text-decoration: none; color: white; background: rgba(255, 255, 255, 0.1); padding: 12px 24px; border-radius: 12px; transition: 0.3s; font-weight: 600; &:hover { background: rgba(255, 255, 255, 0.2); transform: translateY(-3px); } `;
+const SliderSection = styled.section`
+  width: 100%; margin-bottom: 60px; padding: 0 60px;
+`;
+const SliderWrapper = styled.div`
+  position: relative; width: 100%; aspect-ratio: 16/6;
+  border-radius: 24px; overflow: hidden; background: rgba(0,0,0,0.5);
+`;
+const SliderImage = styled.img`
+  width: 100%; height: 100%; object-fit: cover;
+`;
+const SliderVideo = styled.video`
+  width: 100%; height: 100%; object-fit: cover;
+`;
+const SliderOverlay = styled.div`
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 40px; background: linear-gradient(transparent, rgba(0,0,0,0.7));
+`;
+const SliderTitle = styled.h2`
+  font-size: 28px; font-weight: 800; margin: 0; color: white;
+`;
+const SliderBtn = styled.button<{ $left?: boolean }>`
+  position: absolute; top: 50%; transform: translateY(-50%);
+  ${p => p.$left ? 'left: 20px;' : 'right: 20px;'}
+  background: rgba(0,0,0,0.5); border: none; color: white;
+  font-size: 36px; width: 50px; height: 50px; border-radius: 50%;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  &:hover { background: rgba(123,44,191,0.7); }
+`;
+const SliderDots = styled.div`
+  position: absolute; bottom: 20px; right: 20px;
+  display: flex; gap: 8px;
+`;
+const Dot = styled.button<{ $active: boolean }>`
+  width: 8px; height: 8px; border-radius: 50%; border: none; cursor: pointer;
+  background: ${p => p.$active ? '#ff85a1' : 'rgba(255,255,255,0.4)'};
+  transition: 0.3s;
+`;

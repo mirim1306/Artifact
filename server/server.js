@@ -33,7 +33,13 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/'),
   filename: (req, file, cb) => cb(null, Date.now() + '-' + Math.random().toString(36).substr(2,9) + path.extname(file.originalname))
 });
-const upload = multer({ storage });
+const upload = multer({ 
+  storage,
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'video/mov'];
+    cb(null, allowed.includes(file.mimetype));
+  }
+});
 
 const authMiddleware = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -123,11 +129,11 @@ app.get('/api/portfolios/:id', async (req, res) => {
     return res.status(404).json({ success: false, message: '포트폴리오를 찾을 수 없습니다.' });
   
   // 추가 이미지 조회
-  const images = await pool.query(
-    'SELECT * FROM portfolio_images WHERE portfolio_id = $1 ORDER BY order_num',
+  const media = await pool.query(
+    'SELECT * FROM portfolio_media WHERE portfolio_id = $1 ORDER BY order_num',
     [req.params.id]
   );
-  res.json({ success: true, portfolio: { ...result.rows[0], extra_images: images.rows } });
+  res.json({ success: true, portfolio: { ...result.rows[0], media: media.rows } });
 });
 
 app.get('/api/my/portfolios', authMiddleware, async (req, res) => {
@@ -138,7 +144,7 @@ app.get('/api/my/portfolios', authMiddleware, async (req, res) => {
 // 포트폴리오 등록 (다중 이미지 지원)
 app.post('/api/portfolios', authMiddleware, upload.fields([
   { name: 'main_image', maxCount: 1 },
-  { name: 'extra_images', maxCount: 100 }
+  { name: 'media_files', maxCount: 20 }
 ]), async (req, res) => {
   const {
     title, category, service_intro,
@@ -151,7 +157,7 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
     return res.status(400).json({ success: false, message: '제목과 카테고리는 필수입니다.' });
 
   const main_image = req.files?.['main_image']?.[0] ? `/uploads/${req.files['main_image'][0].filename}` : null;
-  const extra_images = req.files?.['extra_images'] || [];
+  const media_files = req.files?.['media_files'] || [];
 
   try {
     const result = await pool.query(
@@ -174,12 +180,13 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
     const portfolioId = result.rows[0].id;
 
     // 추가 이미지 저장
-    for (let i = 0; i < extra_images.length; i++) {
+    for (let i = 0; i < media_files.length; i++) {
+      const isVideo = media_files[i].mimetype.startsWith('video/');
       await pool.query(
-        'INSERT INTO portfolio_images (portfolio_id, image_url, order_num) VALUES ($1, $2, $3)',
-        [portfolioId, `/uploads/${extra_images[i].filename}`, i]
+        'INSERT INTO portfolio_media (portfolio_id, media_url, media_type, order_num) VALUES ($1, $2, $3, $4)',
+        [portfolioId, `/uploads/${media_files[i].filename}`, isVideo ? 'video' : 'image', i]
       );
-    }
+  }
 
     res.status(201).json({ success: true, message: '포트폴리오가 등록되었습니다!', portfolio: result.rows[0] });
   } catch (err) {
