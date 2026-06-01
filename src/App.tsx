@@ -146,13 +146,13 @@ const App = () => {
               {featuredMedia[sliderIndex].media_type === 'video' ? (
                 <SliderVideo
                   key={sliderIndex}
-                  src={`http://localhost:4000${featuredMedia[sliderIndex].media_url}`}
+                  src={featuredMedia[sliderIndex].media_url}
                   autoPlay muted loop playsInline
                 />
               ) : (
                 <SliderImage
                   key={sliderIndex}
-                  src={`http://localhost:4000${featuredMedia[sliderIndex].media_url}`}
+                  src={featuredMedia[sliderIndex].media_url}
                   alt={featuredMedia[sliderIndex].title}
                 />
               )}
@@ -184,7 +184,7 @@ const App = () => {
               <GridItem key={item.id} onDoubleClick={() => setSelectedProject(item)}>
                 <div className="image-box">
                   <img
-                    src={item.main_image ? `http://localhost:4000${item.main_image}` : '/artifact-logo.png'}
+                    src={item.main_image ? item.main_image : '/artifact-logo.png'}
                     alt={item.title}
                   />
                   <div className="card-info">

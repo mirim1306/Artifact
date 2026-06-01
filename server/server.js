@@ -8,6 +8,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+const cloudinary = require('cloudinary').v2;
+
 dotenv.config({ path: './server/.env' });
 
 const app = express();
@@ -16,6 +18,12 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
+
+cloudinary.config({ 
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
+  api_key: process.env.CLOUDINARY_API_KEY, 
+  api_secret: process.env.CLOUDINARY_API_SECRET 
+});
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -156,10 +164,23 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
   if (!title || !category)
     return res.status(400).json({ success: false, message: '제목과 카테고리는 필수입니다.' });
 
-  const main_image = req.files?.['main_image']?.[0] ? `/uploads/${req.files['main_image'][0].filename}` : null;
-  const media_files = req.files?.['media_files'] || [];
-
   try {
+    let main_image_url = null;
+    
+    // 메인 이미지 Cloudinary 업로드
+    if (req.files?.['main_image']?.[0]) {
+      const uploadRes = await cloudinary.uploader.upload(req.files['main_image'][0].path, {
+        folder: "portfolio_main",
+        resource_type: "auto"
+      });
+      main_image_url = uploadRes.secure_url;
+      
+      // 업로드 후 서버 임시 파일 삭제 (용량 확보)
+      if (fs.existsSync(req.files['main_image'][0].path)) {
+        fs.unlinkSync(req.files['main_image'][0].path);
+      }
+    }
+
     const result = await pool.query(
       `INSERT INTO portfolios 
         (user_id, title, category, main_image, service_intro,
@@ -168,7 +189,7 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
        RETURNING *`,
       [
-        req.user.id, title, category, main_image,
+        req.user.id, title, category, main_image_url, // 로컬 경로 대신 URL 삽입
         service_intro || null, main_features || null,
         tech_environment || null, team_members || null,
         dev_period || null, github_link || null,
@@ -178,15 +199,26 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
     );
 
     const portfolioId = result.rows[0].id;
+    const media_files = req.files?.['media_files'] || [];
 
-    // 추가 이미지 저장
+    // 추가 미디어 파일들 Cloudinary 업로드
     for (let i = 0; i < media_files.length; i++) {
       const isVideo = media_files[i].mimetype.startsWith('video/');
+      const uploadRes = await cloudinary.uploader.upload(media_files[i].path, {
+        folder: "portfolio_media",
+        resource_type: "auto"
+      });
+
       await pool.query(
         'INSERT INTO portfolio_media (portfolio_id, media_url, media_type, order_num) VALUES ($1, $2, $3, $4)',
-        [portfolioId, `/uploads/${media_files[i].filename}`, isVideo ? 'video' : 'image', i]
+        [portfolioId, uploadRes.secure_url, isVideo ? 'video' : 'image', i] // URL 삽입
       );
-  }
+
+      // 업로드 후 서버 임시 파일 삭제
+      if (fs.existsSync(media_files[i].path)) {
+        fs.unlinkSync(media_files[i].path);
+      }
+    }
 
     res.status(201).json({ success: true, message: '포트폴리오가 등록되었습니다!', portfolio: result.rows[0] });
   } catch (err) {
@@ -212,8 +244,20 @@ app.put('/api/portfolios/:id', authMiddleware, upload.fields([
     if (check.rows.length === 0) return res.status(404).json({ success: false, message: '포트폴리오를 찾을 수 없습니다.' });
     if (check.rows[0].user_id !== req.user.id) return res.status(403).json({ success: false, message: '수정 권한이 없습니다.' });
 
-    const main_image = req.files?.['main_image']?.[0] ? `/uploads/${req.files['main_image'][0].filename}` : undefined;
-    const extra_images = req.files?.['extra_images'] || [];
+    let main_image_url = undefined;
+    
+    // 메인 이미지가 변경되었을 때 처리
+    if (req.files?.['main_image']?.[0]) {
+      const uploadRes = await cloudinary.uploader.upload(req.files['main_image'][0].path, {
+        folder: "portfolio_main",
+        resource_type: "auto"
+      });
+      main_image_url = uploadRes.secure_url;
+      
+      if (fs.existsSync(req.files['main_image'][0].path)) {
+        fs.unlinkSync(req.files['main_image'][0].path);
+      }
+    }
 
     let query = `UPDATE portfolios SET 
       title=$1, category=$2, service_intro=$3,
@@ -230,20 +274,32 @@ app.put('/api/portfolios/:id', authMiddleware, upload.fields([
       run_link || null, file_link || null, store_link || null, design_tool || null
     ];
 
-    if (main_image) { query += `, main_image=$${params.length + 1}`; params.push(main_image); }
+    if (main_image_url) { query += `, main_image=$${params.length + 1}`; params.push(main_image_url); }
     query += ` WHERE id=$${params.length + 1} RETURNING *`;
     params.push(req.params.id);
 
     const result = await pool.query(query, params);
 
-    // 추가 이미지 새로 저장
+    const extra_images = req.files?.['extra_images'] || [];
+    
+    // 추가 이미지가 새로 들어왔을 때 처리
     if (extra_images.length > 0) {
       await pool.query('DELETE FROM portfolio_images WHERE portfolio_id = $1', [req.params.id]);
+      
       for (let i = 0; i < extra_images.length; i++) {
+        const uploadRes = await cloudinary.uploader.upload(extra_images[i].path, {
+          folder: "portfolio_media",
+          resource_type: "auto"
+        });
+
         await pool.query(
           'INSERT INTO portfolio_images (portfolio_id, image_url, order_num) VALUES ($1, $2, $3)',
-          [req.params.id, `/uploads/${extra_images[i].filename}`, i]
+          [req.params.id, uploadRes.secure_url, i] // URL 삽입
         );
+
+        if (fs.existsSync(extra_images[i].path)) {
+          fs.unlinkSync(extra_images[i].path);
+        }
       }
     }
 
