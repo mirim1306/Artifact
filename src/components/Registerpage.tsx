@@ -14,8 +14,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
   const [error, setError] = useState('');
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
-  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
-  const [mediaPreviews, setMediaPreviews] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
 
   const [form, setForm] = useState({
     title: '',
@@ -50,20 +48,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
     }
   };
 
-  const handleMediaFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setMediaFiles(prev => [...prev, ...files]);
-    setMediaPreviews(prev => [...prev, ...files.map(f => ({
-      url: URL.createObjectURL(f),
-      type: f.type.startsWith('video/') ? 'video' as const : 'image' as const
-    }))]);
- };
-
-  const removeMedia = (index: number) => {
-    setMediaFiles(prev => prev.filter((_, i) => i !== index));
-    setMediaPreviews(prev => prev.filter((_, i) => i !== index));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -75,7 +59,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
     const formData = new FormData();
     Object.entries(form).forEach(([key, value]) => formData.append(key, value));
     if (mainImageFile) formData.append('main_image', mainImageFile);
-    mediaFiles.forEach(f => formData.append('media_files', f));
 
     const res = await portfolioAPI.create(formData);
     setLoading(false);
@@ -90,7 +73,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
   return (
     <Container>
       <Header>
-        <BackButton onClick={onBack}>← 돌아가기</BackButton>
         <Title>포트폴리오 등록</Title>
       </Header>
 
@@ -128,23 +110,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
             }
           </ImageUploadBox>
           <input id="mainImageInput" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleMainImage} />
-
-          <Label>작품 영상 / 이미지 <Required>*</Required></Label>
-          <ExtraImageGrid>
-            {mediaPreviews.map((item, i) => (
-              <ExtraImageItem key={i}>
-                {item.type === 'video'
-                  ? <video src={item.url} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <img src={item.url} alt={`media-${i}`} />
-                }
-                <RemoveBtn type="button" onClick={() => removeMedia(i)}>✕</RemoveBtn>
-              </ExtraImageItem>
-            ))}
-            <AddImageBox onClick={() => document.getElementById('mediaInput')?.click()}>
-              + 영상/이미지 추가
-            </AddImageBox>
-          </ExtraImageGrid>
-          <input id="mediaInput" type="file" accept="image/*,video/*" multiple style={{ display: 'none' }} onChange={handleMediaFiles} />
 
           <Label>제목 <Required>*</Required></Label>
           <Input name="title" placeholder="프로젝트 제목" value={form.title} onChange={handleChange} />
@@ -192,7 +157,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
             <>
               <Label>사용 툴</Label>
               <Input name="design_tool" placeholder="Figma, Photoshop, Illustrator..." value={form.design_tool} onChange={handleChange} />
-              <input id="extraImageInput" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleMediaFiles} />
             </>
           )}
 
@@ -238,13 +202,6 @@ const Container = styled.div`
 
 const Header = styled.div`
   margin-bottom: 32px;
-`;
-
-const BackButton = styled.button`
-  background: none; border: none;
-  color: rgba(255,255,255,0.6); font-size: 15px;
-  cursor: pointer; margin-bottom: 12px; display: block;
-  &:hover { color: white; }
 `;
 
 const Title = styled.h1`
@@ -310,31 +267,6 @@ const ImageUploadBox = styled.div`
 
 const PreviewImg = styled.img` width: 100%; height: 100%; object-fit: cover; `;
 const UploadPlaceholder = styled.div` color: rgba(255,255,255,0.4); font-size: 15px; `;
-
-const ExtraImageGrid = styled.div`
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 4px;
-`;
-
-const ExtraImageItem = styled.div`
-  position: relative; aspect-ratio: 1;
-  border-radius: 10px; overflow: hidden;
-  img { width: 100%; height: 100%; object-fit: cover; }
-`;
-
-const RemoveBtn = styled.button`
-  position: absolute; top: 4px; right: 4px;
-  background: rgba(0,0,0,0.6); border: none; color: white;
-  border-radius: 50%; width: 22px; height: 22px;
-  font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-`;
-
-const AddImageBox = styled.div`
-  aspect-ratio: 1; border-radius: 10px;
-  border: 2px dashed rgba(255,255,255,0.2);
-  display: flex; align-items: center; justify-content: center;
-  color: rgba(255,255,255,0.4); font-size: 13px; cursor: pointer;
-  &:hover { border-color: #7b2cbf; color: white; }
-`;
 
 const SubmitButton = styled.button`
   padding: 16px; border-radius: 14px; border: none;

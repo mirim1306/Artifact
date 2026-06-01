@@ -71,7 +71,6 @@ const App = () => {
     if (token && savedUser) setUser(JSON.parse(savedUser));
   }, []);
 
-  // 외부 변수(tab)를 직접 참조하지 않고 인자(currentTab)로 받아서 의존성 배열 경고 완전 제거!
   const fetchPortfolios = useCallback(async (currentTab: Category) => {
     setLoading(true);
     try {
@@ -93,7 +92,6 @@ const App = () => {
     }
   }, []);
 
-  // 의존성 배열에 필요한 모든 상태와 함수를 명시하여 빨간 줄 완벽 방어!
   useEffect(() => {
     if (navTab === 'home') {
       fetchPortfolios(tab);
@@ -200,6 +198,7 @@ const App = () => {
         )}
 
         <Nav>
+          {/* 💡 한자 오타를 깨끗하게 지웠습니다! */}
           {(['전체', '앱', '웹', '디자인', '게임'] as Category[]).map(c => (
             <TabButton key={c} $active={tab === c} onClick={() => handleTabChange(c)}>{c}</TabButton>
           ))}
@@ -217,7 +216,6 @@ const App = () => {
                   <img src={getImageUrl(item.main_image)} alt={item.title} />
                   <div className="card-info">
                     <span className="cat">{item.category}</span>
-                    <span className="id">{String(item.id).padStart(2, '0')}</span>
                   </div>
                   <div className="hover-tip">더블 클릭 하세요!</div>
                 </div>
@@ -288,7 +286,7 @@ const Logo = styled.img` height: 50px; width: auto; object-fit: contain; `;
 const HeaderRight = styled.div` display: flex; align-items: center; gap: 12px; `;
 const NicknameText = styled.span` font-size: 15px; color: rgba(255,255,255,0.8); font-weight: 600; `;
 
-/* ── 헤더 버튼: 라벤더 ── */
+/* ── 헤더 버튼 ── */
 const HeaderButton = styled.button<{ $outline?: boolean }>`
   padding: 12px 24px; border-radius: 50px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s;
   ${props => props.$outline ? css`
@@ -304,7 +302,7 @@ const HeaderButton = styled.button<{ $outline?: boolean }>`
   `}
 `;
 
-/* ── 네비게이션 패널 (버튼 크기 확대) ── */
+/* ── 네비게이션 패널 ── */
 const NavPanel = styled.div` display: flex; justify-content: center; padding: 0 40px; margin-top: 10px; `;
 const NavPanelInner = styled.div`
   display: flex; gap: 10px;
@@ -372,7 +370,7 @@ const Dot = styled.button<{ $active: boolean }>`
   transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 `;
 
-/* ── 카테고리 탭 (버튼 크기 확대) ── */
+/* ── 카테고리 탭 ── */
 const Nav = styled.nav` display: flex; justify-content: center; gap: 16px; margin: 40px 0; `;
 const TabButton = styled.button<{ $active: boolean }>`
   padding: 14px 36px; border-radius: 50px; font-size: 16px; font-weight: 700;
@@ -400,7 +398,6 @@ const GridItem = styled.div`
     img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s ease; }
     .card-info { position: absolute; top: 15px; left: 20px; right: 20px; display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; z-index: 2; }
     .cat { background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 5px; }
-    .id { color: rgba(255,255,255,0.5); }
     .hover-tip { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); opacity: 0; transition: 0.3s; z-index: 1; }
   }
   &:hover img { transform: scale(1.04); }

@@ -80,7 +80,7 @@ const MyPage: React.FC<MyPageProps> = ({ user, onBack, onRegister }) => {
 
   return (
     <Container>
-      <BackButton onClick={onBack}>← 메인으로</BackButton>
+      {/* 💡 제거 완료: <BackButton> 태그를 삭제했습니다. */}
 
       <ProfileSection>
         <Avatar>👤</Avatar>
@@ -198,12 +198,7 @@ const Container = styled.div`
   animation: ${fadeIn} 0.4s ease;
 `;
 
-const BackButton = styled.button`
-  background: none; border: none;
-  color: rgba(255,255,255,0.6); font-size: 16px;
-  cursor: pointer; margin-bottom: 30px; display: block;
-  &:hover { color: white; }
-`;
+// 💡 제거 완료: 사용하지 않는 BackButton 스타일 컴포넌트를 삭제했습니다.
 
 const ProfileSection = styled.div`
   display: flex;
