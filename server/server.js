@@ -15,6 +15,7 @@ const PORT = process.env.PORT || 4000;
 
 app.use(cors());
 app.use(express.json());
+<<<<<<< HEAD
 
 // 💡 [경로 보완] 항상 server/uploads 폴더를 정확히 바라보도록 절대 경로 매핑
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -47,6 +48,24 @@ if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
+=======
+app.use('/uploads', express.static('uploads'));
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+pool.connect((err) => {
+  if (err) console.error('DB 연결 실패:', err);
+  else console.log('✅ DB 연결 성공!');
+});
+
+if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
   filename: (req, file, cb) => cb(null, Date.now() + '-' + Math.random().toString(36).substr(2,9) + path.extname(file.originalname))
 });
 const upload = multer({ 
@@ -73,12 +92,17 @@ const authMiddleware = (req, res, next) => {
 // ══════════════════════════════════════════════════════════════
 
 app.get('/api/check-username/:username', async (req, res) => {
+<<<<<<< HEAD
   try {
     const result = await pool.query('SELECT id FROM users WHERE username = $1', [req.params.username]);
     res.json({ available: result.rows.length === 0 });
   } catch (err) {
     res.status(500).json({ success: false, message: '조회 중 오류가 발생했습니다.' });
   }
+=======
+  const result = await pool.query('SELECT id FROM users WHERE username = $1', [req.params.username]);
+  res.json({ available: result.rows.length === 0 });
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 });
 
 app.post('/api/register', async (req, res) => {
@@ -122,12 +146,17 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.get('/api/me', authMiddleware, async (req, res) => {
+<<<<<<< HEAD
   try {
     const result = await pool.query('SELECT id, username, nickname, email, created_at FROM users WHERE id = $1', [req.user.id]);
     res.json({ success: true, user: result.rows[0] });
   } catch {
     res.status(500).json({ success: false, message: '사용자 정보를 불러올 수 없습니다.' });
   }
+=======
+  const result = await pool.query('SELECT id, username, nickname, email, created_at FROM users WHERE id = $1', [req.user.id]);
+  res.json({ success: true, user: result.rows[0] });
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 });
 
 // ══════════════════════════════════════════════════════════════
@@ -135,6 +164,7 @@ app.get('/api/me', authMiddleware, async (req, res) => {
 // ══════════════════════════════════════════════════════════════
 
 app.get('/api/portfolios', async (req, res) => {
+<<<<<<< HEAD
   try {
     const { category } = req.query;
     let query = `SELECT p.*, u.nickname FROM portfolios p JOIN users u ON p.user_id = u.id WHERE p.is_public = true`;
@@ -174,6 +204,36 @@ app.get('/api/my/portfolios', authMiddleware, async (req, res) => {
   } catch {
     res.status(500).json({ success: false, message: '내 포트폴리오 조회 오류.' });
   }
+=======
+  const { category } = req.query;
+  let query = `SELECT p.*, u.nickname FROM portfolios p JOIN users u ON p.user_id = u.id WHERE p.is_public = true`;
+  const params = [];
+  if (category && category !== '전체') { query += ' AND p.category = $1'; params.push(category); }
+  query += ' ORDER BY p.created_at DESC';
+  const result = await pool.query(query, params);
+  res.json({ success: true, portfolios: result.rows });
+});
+
+app.get('/api/portfolios/:id', async (req, res) => {
+  const result = await pool.query(
+    'SELECT p.*, u.nickname FROM portfolios p JOIN users u ON p.user_id = u.id WHERE p.id = $1',
+    [req.params.id]
+  );
+  if (result.rows.length === 0)
+    return res.status(404).json({ success: false, message: '포트폴리오를 찾을 수 없습니다.' });
+  
+  // 추가 이미지 조회
+  const media = await pool.query(
+    'SELECT * FROM portfolio_media WHERE portfolio_id = $1 ORDER BY order_num',
+    [req.params.id]
+  );
+  res.json({ success: true, portfolio: { ...result.rows[0], media: media.rows } });
+});
+
+app.get('/api/my/portfolios', authMiddleware, async (req, res) => {
+  const result = await pool.query('SELECT * FROM portfolios WHERE user_id = $1 ORDER BY created_at DESC', [req.user.id]);
+  res.json({ success: true, portfolios: result.rows });
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 });
 
 // 포트폴리오 등록 (다중 이미지 지원)
@@ -221,7 +281,11 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
         'INSERT INTO portfolio_media (portfolio_id, media_url, media_type, order_num) VALUES ($1, $2, $3, $4)',
         [portfolioId, `/uploads/${media_files[i].filename}`, isVideo ? 'video' : 'image', i]
       );
+<<<<<<< HEAD
     }
+=======
+  }
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 
     res.status(201).json({ success: true, message: '포트폴리오가 등록되었습니다!', portfolio: result.rows[0] });
   } catch (err) {

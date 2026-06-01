@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import React, { useState, useEffect, useCallback } from 'react';
+=======
+import { useState, useEffect } from 'react';
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 import styled, { createGlobalStyle, css } from 'styled-components';
 import ProjectDetail from './components/ProjectDetail';
 import AuthPage from './components/Authpage';
@@ -10,7 +14,11 @@ const GlobalStyle = createGlobalStyle`
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0; width: 100%; overflow-x: hidden;
+<<<<<<< HEAD
     background: linear-gradient(180deg, #141828 0%, #1c2440 50%, #111623 100%) no-repeat fixed;
+=======
+    background: linear-gradient(180deg, #252433 0%, #22242b 40%, #000000 100%) no-repeat fixed;
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
     color: white;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
@@ -29,6 +37,10 @@ interface Project {
   file_link?: string;
   store_link?: string;
   is_public: boolean;
+<<<<<<< HEAD
+=======
+  nickname?: string;
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 }
 
 interface User {
@@ -39,6 +51,7 @@ interface User {
   created_at?: string;
 }
 
+<<<<<<< HEAD
 interface SliderItem {
   id: number;
   title: string;
@@ -53,6 +66,8 @@ const getImageUrl = (url: string | undefined): string => {
   return `http://localhost:4000${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
+=======
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 const App = () => {
   const [tab, setTab] = useState<Category>('전체');
   const [navTab, setNavTab] = useState<NavTab>('home');
@@ -61,9 +76,14 @@ const App = () => {
   const [showAuth, setShowAuth] = useState(false);
   const [portfolios, setPortfolios] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
+<<<<<<< HEAD
   const [sliderItems, setSliderItems] = useState<SliderItem[]>([]);
   const [sliderIndex, setSliderIndex] = useState(0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+=======
+  const [featuredMedia, setFeaturedMedia] = useState<{media_url: string; media_type: string; title: string}[]>([]);
+  const [sliderIndex, setSliderIndex] = useState(0);
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -71,6 +91,7 @@ const App = () => {
     if (token && savedUser) setUser(JSON.parse(savedUser));
   }, []);
 
+<<<<<<< HEAD
   const fetchPortfolios = useCallback(async (currentTab: Category) => {
     setLoading(true);
     try {
@@ -110,6 +131,32 @@ const App = () => {
   const handleTabChange = (c: Category) => {
     setTab(c);
     setSliderIndex(0); 
+=======
+  useEffect(() => {
+    if (navTab === 'home') fetchPortfolios();
+  }, [navTab, tab]);
+
+  const fetchPortfolios = async () => {
+    setLoading(true);
+    const res = await portfolioAPI.getAll(tab === '전체' ? undefined : tab);
+    if (res.success) {
+      setPortfolios(res.portfolios);
+      // 각 포트폴리오의 미디어 가져오기
+      const mediaList: {media_url: string; media_type: string; title: string}[] = [];
+      for (const p of res.portfolios.slice(0, 5)) {
+        const detail = await portfolioAPI.getOne(p.id);
+        if (detail.success && detail.portfolio.media?.length > 0) {
+          mediaList.push({
+            ...detail.portfolio.media[0],
+            title: p.title
+          });
+        }
+      }
+      setFeaturedMedia(mediaList);
+      setSliderIndex(0);
+    }
+    setLoading(false);
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
   };
 
   const handleLogin = (userData: User, token: string) => {
@@ -152,6 +199,7 @@ const App = () => {
   );
 
   const renderContent = () => {
+<<<<<<< HEAD
     if (selectedProject) return <ProjectDetail project={selectedProject} onBack={() => setSelectedProject(null)} />;
     
     if (navTab === 'register') {
@@ -188,11 +236,56 @@ const App = () => {
                   <SliderArrowBtn onClick={() => setSliderIndex(i => (i + 1) % sliderItems.length)}>›</SliderArrowBtn>
                   <SliderDots>
                     {sliderItems.map((_, i) => (
+=======
+    if (selectedProject) {
+      return <ProjectDetail project={selectedProject} onBack={() => setSelectedProject(null)} />;
+    }
+    if (navTab === 'register') {
+      return <RegisterPage onBack={() => setNavTab('home')} onSuccess={() => { setNavTab('home'); fetchPortfolios(); }} />;
+    }
+    if (navTab === 'mypage' && user) {
+      return <MyPage user={user} onBack={() => setNavTab('home')} onRegister={() => setNavTab('register')} />;
+    }
+    return (
+      <>
+        <Nav>
+          {(['전체', '앱', '웹', '디자인', '게임'] as Category[]).map(c => (
+            <TabButton key={c} $active={tab === c} onClick={() => setTab(c)}>{c}</TabButton>
+          ))}
+        </Nav>
+
+        {featuredMedia.length > 0 && (
+          <SliderSection>
+            <SliderWrapper>
+              {featuredMedia[sliderIndex].media_type === 'video' ? (
+                <SliderVideo
+                  key={sliderIndex}
+                  src={`http://localhost:4000${featuredMedia[sliderIndex].media_url}`}
+                  autoPlay muted loop playsInline
+                />
+              ) : (
+                <SliderImage
+                  key={sliderIndex}
+                  src={`http://localhost:4000${featuredMedia[sliderIndex].media_url}`}
+                  alt={featuredMedia[sliderIndex].title}
+                />
+              )}
+              <SliderOverlay>
+                <SliderTitle>{featuredMedia[sliderIndex].title}</SliderTitle>
+              </SliderOverlay>
+              {featuredMedia.length > 1 && (
+                <>
+                  <SliderBtn $left onClick={() => setSliderIndex(i => (i - 1 + featuredMedia.length) % featuredMedia.length)}>‹</SliderBtn>
+                  <SliderBtn onClick={() => setSliderIndex(i => (i + 1) % featuredMedia.length)}>›</SliderBtn>
+                  <SliderDots>
+                    {featuredMedia.map((_, i) => (
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
                       <Dot key={i} $active={i === sliderIndex} onClick={() => setSliderIndex(i)} />
                     ))}
                   </SliderDots>
                 </>
               )}
+<<<<<<< HEAD
             </SliderContainer>
           </MainSliderSection>
         )}
@@ -204,6 +297,12 @@ const App = () => {
           ))}
         </Nav>
 
+=======
+            </SliderWrapper>
+          </SliderSection>
+        )}
+
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
         <GridMain>
           {loading ? (
             <LoadingText>불러오는 중...</LoadingText>
@@ -213,9 +312,19 @@ const App = () => {
             portfolios.map(item => (
               <GridItem key={item.id} onDoubleClick={() => setSelectedProject(item)}>
                 <div className="image-box">
+<<<<<<< HEAD
                   <img src={getImageUrl(item.main_image)} alt={item.title} />
                   <div className="card-info">
                     <span className="cat">{item.category}</span>
+=======
+                  <img
+                    src={item.main_image ? `http://localhost:4000${item.main_image}` : '/artifact-logo.png'}
+                    alt={item.title}
+                  />
+                  <div className="card-info">
+                    <span className="cat">{item.category}</span>
+                    <span className="id">{String(item.id).padStart(2, '0')}</span>
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
                   </div>
                   <div className="hover-tip">더블 클릭 하세요!</div>
                 </div>
@@ -247,7 +356,11 @@ const App = () => {
       <PageWrapper>
         <TopArea>
           <Header>
+<<<<<<< HEAD
             <LogoWrapper onClick={handleNavHome} style={{ cursor: 'pointer' }}>
+=======
+            <LogoWrapper>
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
               <Logo src="/artifact-logo.png" alt="ARTIFACT" />
             </LogoWrapper>
             <HeaderRight>
@@ -269,7 +382,14 @@ const App = () => {
             </NavPanelInner>
           </NavPanel>
         </TopArea>
+<<<<<<< HEAD
         <ContentArea>{renderContent()}</ContentArea>
+=======
+
+        <ContentArea>
+          {renderContent()}
+        </ContentArea>
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
       </PageWrapper>
     </>
   );
@@ -277,6 +397,7 @@ const App = () => {
 
 export default App;
 
+<<<<<<< HEAD
 /* ── 레이아웃 ── */
 const PageWrapper = styled.div` width: 100%; min-height: 100vh; display: flex; flex-direction: column; `;
 const TopArea = styled.div` width: 100%; padding-bottom: 20px; `;
@@ -389,10 +510,89 @@ const TabButton = styled.button<{ $active: boolean }>`
 `;
 
 /* ── 그리드 ── */
+=======
+const PageWrapper = styled.div`
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+`;
+
+const TopArea = styled.div`
+  width: 100%;
+  padding-bottom: 20px;
+`;
+
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+`;
+const LogoWrapper = styled.div``;
+const Logo = styled.img` height: 80px; width: auto; `;
+const HeaderRight = styled.div` display: flex; align-items: center; gap: 12px; `;
+const NicknameText = styled.span` font-size: 15px; color: rgba(255,255,255,0.8); font-weight: 600; `;
+const HeaderButton = styled.button<{ $outline?: boolean }>`
+  padding: 10px 20px; border-radius: 50px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s;
+  ${props => props.$outline ? css`
+    background: transparent; border: 1px solid rgba(255,255,255,0.3); color: rgba(255,255,255,0.7);
+    &:hover { border-color: white; color: white; }
+  ` : css`
+    background: linear-gradient(135deg, #7b2cbf, #ff85a1); border: none; color: white;
+    &:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(123,44,191,0.4); }
+  `}
+`;
+
+const NavPanel = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 0 40px;
+`;
+const NavPanelInner = styled.div`
+  display: flex; gap: 8px;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 50px;
+  padding: 6px;
+`;
+const NavItem = styled.button<{ $active: boolean }>`
+  padding: 12px 40px; border-radius: 50px; font-size: 15px; font-weight: 700;
+  cursor: pointer; border: none; transition: all 0.3s;
+  ${props => props.$active ? css`
+    background: linear-gradient(135deg, #7b2cbf, #ff85a1); color: white;
+    box-shadow: 0 4px 12px rgba(123,44,191,0.4);
+  ` : css`
+    background: transparent; color: rgba(255,255,255,0.6);
+    &:hover { background: rgba(255,255,255,0.1); color: white; }
+  `}
+`;
+
+const ContentArea = styled.div`
+  flex: 1;
+  padding-top: 30px;
+`;
+
+const Nav = styled.nav` display: flex; justify-content: center; gap: 40px; margin-bottom: 70px; `;
+const TabButton = styled.button<{ $active: boolean }>`
+  padding: 14px 42px; border-radius: 50px; font-size: 18px; font-weight: 800;
+  cursor: pointer; border: none; outline: none;
+  transition: all 0.5s cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  ${props => props.$active ? css`
+    background: linear-gradient(135deg, #7b2cbf 0%, #ff85a1 100%); color: white;
+    box-shadow: 0 10px 20px rgba(123, 44, 191, 0.4); transform: translateY(-12px) scale(1.12);
+  ` : css`
+    background: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.5); backdrop-filter: blur(10px);
+    &:hover { background: rgba(255, 255, 255, 0.2); color: white; transform: translateY(-5px) scale(1.05); }
+  `}
+`;
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 const GridMain = styled.main` display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; padding: 0 60px 100px; `;
 const GridItem = styled.div`
   display: flex; flex-direction: column; cursor: pointer;
   .image-box {
+<<<<<<< HEAD
     width: 100%; aspect-ratio: 16 / 10; overflow: hidden; position: relative;
     border-radius: 16px; background: #1c2440; border: 1px solid rgba(255,255,255,0.05);
     img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s ease; }
@@ -425,4 +625,56 @@ const GithubLink = styled.a`
   padding: 10px 20px; border-radius: 10px; transition: 0.3s; font-size: 14px; font-weight: 600;
   border: 1px solid rgba(255, 255, 255, 0.3);
   &:hover { background: #1a1f3a; border-color: rgba(124,111,205,0.3); color: #ffffff; }
+=======
+    width: 100%; aspect-ratio: 16 / 10; overflow: hidden; position: relative; border-radius: 24px; background: rgba(0,0,0,0.3);
+    img { width: 100%; height: 100%; object-fit: cover; transition: 0.6s ease; }
+    .card-info { position: absolute; top: 15px; left: 20px; right: 20px; display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; }
+    .hover-tip { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); opacity: 0; transition: 0.3s; }
+  }
+  &:hover img { transform: scale(1.08); }
+  &:hover .hover-tip { opacity: 1; }
+  .title-label { padding: 15px 5px; text-align: center; font-size: 18px; font-weight: 700; }
+`;
+const LoadingText = styled.div` grid-column: 1/-1; text-align: center; padding: 60px; color: rgba(255,255,255,0.5); font-size: 16px; `;
+const EmptyText = styled.div` grid-column: 1/-1; text-align: center; padding: 60px; color: rgba(255,255,255,0.4); font-size: 16px; `;
+const Footer = styled.footer` padding: 80px 60px; background: rgba(0, 0, 0, 0.3); border-top: 1px solid rgba(255, 255, 255, 0.05); `;
+const FooterContent = styled.div` max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; `;
+const GithubLink = styled.a` display: flex; align-items: center; gap: 12px; text-decoration: none; color: white; background: rgba(255, 255, 255, 0.1); padding: 12px 24px; border-radius: 12px; transition: 0.3s; font-weight: 600; &:hover { background: rgba(255, 255, 255, 0.2); transform: translateY(-3px); } `;
+const SliderSection = styled.section`
+  width: 100%; margin-bottom: 60px; padding: 0 60px;
+`;
+const SliderWrapper = styled.div`
+  position: relative; width: 100%; aspect-ratio: 16/6;
+  border-radius: 24px; overflow: hidden; background: rgba(0,0,0,0.5);
+`;
+const SliderImage = styled.img`
+  width: 100%; height: 100%; object-fit: cover;
+`;
+const SliderVideo = styled.video`
+  width: 100%; height: 100%; object-fit: cover;
+`;
+const SliderOverlay = styled.div`
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 40px; background: linear-gradient(transparent, rgba(0,0,0,0.7));
+`;
+const SliderTitle = styled.h2`
+  font-size: 28px; font-weight: 800; margin: 0; color: white;
+`;
+const SliderBtn = styled.button<{ $left?: boolean }>`
+  position: absolute; top: 50%; transform: translateY(-50%);
+  ${p => p.$left ? 'left: 20px;' : 'right: 20px;'}
+  background: rgba(0,0,0,0.5); border: none; color: white;
+  font-size: 36px; width: 50px; height: 50px; border-radius: 50%;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  &:hover { background: rgba(123,44,191,0.7); }
+`;
+const SliderDots = styled.div`
+  position: absolute; bottom: 20px; right: 20px;
+  display: flex; gap: 8px;
+`;
+const Dot = styled.button<{ $active: boolean }>`
+  width: 8px; height: 8px; border-radius: 50%; border: none; cursor: pointer;
+  background: ${p => p.$active ? '#ff85a1' : 'rgba(255,255,255,0.4)'};
+  transition: 0.3s;
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 `;

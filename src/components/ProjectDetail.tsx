@@ -6,20 +6,28 @@ const fadeIn = keyframes`
   to { opacity: 1; transform: translateY(0); }
 `;
 
+<<<<<<< HEAD
 interface MediaFile {
   url: string;
   type: 'image' | 'video';
 }
 
+=======
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 interface Project {
   id: number;
   title: string;
   category: string;
   main_image: string;
+<<<<<<< HEAD
   media_files?: (string | MediaFile)[];
   service_intro?: string;     // 서비스 소개 (박스 밖에 배치)
   main_features?: string;     // 주요 기능 (박스 안으로 이동)
   detail_desc?: string;       // 상세 설명 (박스 안으로 이동)
+=======
+  one_line_desc?: string;
+  detail_desc?: string;
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
   run_link?: string;
   file_link?: string;
   store_link?: string;
@@ -27,11 +35,16 @@ interface Project {
   tech_environment?: string;
   team_members?: string;
   dev_period?: string;
+<<<<<<< HEAD
   design_tool?: string;
   nickname?: string;
   username?: string;
   email?: string;
   user_bio?: string; 
+=======
+  nickname?: string;
+  is_public: boolean;
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 }
 
 interface ProjectDetailProps {
@@ -69,6 +82,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
   };
 
   const url = getUrl();
+<<<<<<< HEAD
   const mainImageUrl = project.main_image ? `http://localhost:4000${project.main_image}` : '/artifact-logo.png';
 
   return (
@@ -77,10 +91,26 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
 
       <MainContent>
         {/* ── 좌측: 프로젝트 기본 인포 메타데이터 박스 ── */}
+=======
+  const imageUrl = project.main_image ? `http://localhost:4000${project.main_image}` : '/artifact-logo.png';
+
+  return (
+    <FullContainer>
+      <Header>
+        <LogoImg src="/artifact-logo.png" alt="Logo" />
+        <BackButton onClick={onBack}>← 목록으로 돌아가기</BackButton>
+      </Header>
+
+      <MainContent>
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
         <InfoSide>
           <TitleBox>
             <MainTitle>{project.title}</MainTitle>
             <SubTitle>{project.category}</SubTitle>
+<<<<<<< HEAD
+=======
+            {project.one_line_desc && <OneLineDesc>{project.one_line_desc}</OneLineDesc>}
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
           </TitleBox>
 
           <RunButton onClick={handleRunService} disabled={isLoading} $loading={isLoading} $hasUrl={!!url}>
@@ -91,6 +121,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
           </RunButton>
 
           <MetaInfo>
+<<<<<<< HEAD
             {project.dev_period && <MetaItem><MetaLabel>개발 기간</MetaLabel><MetaValue>{project.dev_period}</MetaValue></MetaItem>}
             {project.team_members && <MetaItem><MetaLabel>팀원</MetaLabel><MetaValue>{project.team_members}</MetaValue></MetaItem>}
             {project.tech_environment && <MetaItem><MetaLabel>기술 스택 / 환경</MetaLabel><MetaValue>{project.tech_environment}</MetaValue></MetaItem>}
@@ -175,6 +206,24 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
             <DescriptionText>{project.user_bio}</DescriptionText>
           </ContentBlock>
         )}
+=======
+            {project.team_members && <MetaItem><MetaLabel>팀원</MetaLabel><MetaValue>{project.team_members}</MetaValue></MetaItem>}
+            {project.dev_period && <MetaItem><MetaLabel>개발 기간</MetaLabel><MetaValue>{project.dev_period}</MetaValue></MetaItem>}
+            {project.tech_environment && <MetaItem><MetaLabel>기술 스택</MetaLabel><MetaValue>{project.tech_environment}</MetaValue></MetaItem>}
+            {project.github_link && <MetaItem><MetaLabel>GitHub</MetaLabel><MetaValue><a href={project.github_link} target="_blank" rel="noreferrer">{project.github_link}</a></MetaValue></MetaItem>}
+            {project.nickname && <MetaItem><MetaLabel>등록자</MetaLabel><MetaValue>{project.nickname}</MetaValue></MetaItem>}
+          </MetaInfo>
+        </InfoSide>
+
+        <ImageSide>
+          <ProjectImage src={imageUrl} alt="Project Detail" />
+        </ImageSide>
+      </MainContent>
+
+      <BottomSection>
+        <ProjectInfoLabel>PROJECT INFO</ProjectInfoLabel>
+        <DescriptionText>{project.detail_desc}</DescriptionText>
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
       </BottomSection>
     </FullContainer>
   );
@@ -194,10 +243,35 @@ const FullContainer = styled.div`
 `;
 
 const Header = styled.header`
+<<<<<<< HEAD
+=======
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
   width: 100%;
   margin-bottom: 20px;
 `;
 
+<<<<<<< HEAD
+=======
+const LogoImg = styled.img`
+  height: 80px;
+  width: auto;
+  object-fit: contain;
+`;
+
+const BackButton = styled.button`
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 16px;
+  cursor: pointer;
+  padding-top: 15px;
+  &:hover { color: white; }
+`;
+
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 const MainContent = styled.div`
   flex: 1;
   display: flex;
@@ -236,6 +310,16 @@ const SubTitle = styled.span`
   text-transform: uppercase;
 `;
 
+<<<<<<< HEAD
+=======
+const OneLineDesc = styled.p`
+  font-size: 16px;
+  color: rgba(255,255,255,0.7);
+  margin: 0;
+  line-height: 1.5;
+`;
+
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 const RunButton = styled.button<{ $loading: boolean; $hasUrl: boolean }>`
   width: 100%;
   height: 56px;
@@ -265,6 +349,7 @@ const RunButton = styled.button<{ $loading: boolean; $hasUrl: boolean }>`
 const MetaInfo = styled.div`
   display: flex;
   flex-direction: column;
+<<<<<<< HEAD
   gap: 16px;
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.1);
@@ -292,11 +377,26 @@ const MetaValueBox = styled.span`
 const UserDivider = styled.div`
   margin: 8px 0;
   border-top: 1px dashed rgba(255, 255, 255, 0.15);
+=======
+  gap: 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 20px;
+`;
+
+const MetaItem = styled.div` display: flex; flex-direction: column; gap: 4px; `;
+const MetaLabel = styled.span` font-size: 11px; color: #ff85a1; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; `;
+const MetaValue = styled.span`
+  font-size: 14px; color: rgba(255,255,255,0.8);
+  a { color: #7b2cbf; text-decoration: none; &:hover { text-decoration: underline; } }
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 `;
 
 const ImageSide = styled.div`
   flex: 1;
   max-width: 750px;
+<<<<<<< HEAD
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -304,6 +404,8 @@ const ImageSide = styled.div`
 
 const MainImageWrapper = styled.div`
   width: 100%;
+=======
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
   aspect-ratio: 16 / 10;
   background: rgba(255,255,255,0.05);
   border-radius: 30px;
@@ -316,6 +418,7 @@ const ProjectImage = styled.img`
   object-fit: cover;
 `;
 
+<<<<<<< HEAD
 const MediaGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -375,4 +478,26 @@ const DescriptionText = styled.p`
   white-space: pre-line;
   margin: 0;
   text-align: center;
+=======
+const BottomSection = styled.div`
+  margin-top: 40px;
+  padding-bottom: 40px;
+`;
+
+const ProjectInfoLabel = styled.h3`
+  font-size: 13px;
+  color: #ff85a1;
+  letter-spacing: 4px;
+  margin-bottom: 12px;
+  font-weight: 900;
+`;
+
+const DescriptionText = styled.p`
+  max-width: 800px;
+  font-size: 16px;
+  color: rgba(255,255,255,0.8);
+  line-height: 1.8;
+  white-space: pre-line;
+  margin: 0;
+>>>>>>> 9eb887f7c1283f5a6137564338c62861b8443c27
 `;
