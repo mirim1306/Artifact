@@ -14,8 +14,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
   const [error, setError] = useState('');
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
-  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
-  const [mediaPreviews, setMediaPreviews] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
 
   const [form, setForm] = useState({
     title: '',
@@ -50,20 +48,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
     }
   };
 
-  const handleMediaFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setMediaFiles(prev => [...prev, ...files]);
-    setMediaPreviews(prev => [...prev, ...files.map(f => ({
-      url: URL.createObjectURL(f),
-      type: f.type.startsWith('video/') ? 'video' as const : 'image' as const
-    }))]);
- };
-
-  const removeMedia = (index: number) => {
-    setMediaFiles(prev => prev.filter((_, i) => i !== index));
-    setMediaPreviews(prev => prev.filter((_, i) => i !== index));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -75,7 +59,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
     const formData = new FormData();
     Object.entries(form).forEach(([key, value]) => formData.append(key, value));
     if (mainImageFile) formData.append('main_image', mainImageFile);
-    mediaFiles.forEach(f => formData.append('media_files', f));
 
     const res = await portfolioAPI.create(formData);
     setLoading(false);
@@ -90,7 +73,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
   return (
     <Container>
       <Header>
-        <BackButton onClick={onBack}>← 돌아가기</BackButton>
         <Title>포트폴리오 등록</Title>
       </Header>
 
@@ -175,7 +157,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
             <>
               <Label>사용 툴</Label>
               <Input name="design_tool" placeholder="Figma, Photoshop, Illustrator..." value={form.design_tool} onChange={handleChange} />
-              <input id="extraImageInput" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleMediaFiles} />
             </>
           )}
 
@@ -221,13 +202,6 @@ const Container = styled.div`
 
 const Header = styled.div`
   margin-bottom: 32px;
-`;
-
-const BackButton = styled.button`
-  background: none; border: none;
-  color: rgba(255,255,255,0.6); font-size: 15px;
-  cursor: pointer; margin-bottom: 12px; display: block;
-  &:hover { color: white; }
 `;
 
 const Title = styled.h1`

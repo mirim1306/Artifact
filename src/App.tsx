@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled, { createGlobalStyle, css } from 'styled-components';
 import ProjectDetail from './components/ProjectDetail';
 import AuthPage from './components/Authpage';
@@ -40,6 +40,21 @@ interface User {
   created_at?: string;
 }
 
+interface SliderItem {
+  id: number;
+  title: string;
+  image: string;
+  category: string;
+  projectRef: Project;
+}
+
+// Cloudinary URL(http/https)과 로컬 경로(/uploads/...) 모두 처리
+const getImageUrl = (url: string | undefined): string => {
+  if (!url) return '/artifact-logo.png';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `http://localhost:4000${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 const App = () => {
   const [tab, setTab] = useState<Category>('전체');
   const [navTab, setNavTab] = useState<NavTab>('home');
@@ -48,8 +63,9 @@ const App = () => {
   const [showAuth, setShowAuth] = useState(false);
   const [portfolios, setPortfolios] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
-  const [featuredMedia, setFeaturedMedia] = useState<{media_url: string; media_type: string; title: string}[]>([]);
+  const [sliderItems, setSliderItems] = useState<SliderItem[]>([]);
   const [sliderIndex, setSliderIndex] = useState(0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -57,30 +73,44 @@ const App = () => {
     if (token && savedUser) setUser(JSON.parse(savedUser));
   }, []);
 
-  useEffect(() => {
-    if (navTab === 'home') fetchPortfolios();
-  }, [navTab, tab]);
-
-  const fetchPortfolios = async () => {
+  const fetchPortfolios = useCallback(async (currentTab: Category) => {
     setLoading(true);
-    const res = await portfolioAPI.getAll(tab === '전체' ? undefined : tab);
-    if (res.success) {
-      setPortfolios(res.portfolios);
-      // 각 포트폴리오의 미디어 가져오기
-      const mediaList: {media_url: string; media_type: string; title: string}[] = [];
-      for (const p of res.portfolios.slice(0, 5)) {
-        const detail = await portfolioAPI.getOne(p.id);
-        if (detail.success && detail.portfolio.media?.length > 0) {
-          mediaList.push({
-            ...detail.portfolio.media[0],
-            title: p.title
-          });
-        }
+    try {
+      const res = await portfolioAPI.getAll(currentTab === '전체' ? undefined : currentTab);
+      if (res && res.success && Array.isArray(res.portfolios)) {
+        setPortfolios(res.portfolios);
+        const itemsForSlider = res.portfolios.slice(0, 5).map((p: Project) => ({
+          id: p.id, title: p.title, image: p.main_image, category: p.category, projectRef: p,
+        }));
+        setSliderItems(itemsForSlider);
+      } else {
+        setPortfolios([]);
+        setSliderItems([]);
       }
-      setFeaturedMedia(mediaList);
-      setSliderIndex(0);
+    } catch (error) {
+      console.error('데이터를 가져오는 중 오류가 발생했습니다:', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (navTab === 'home') fetchPortfolios(tab);
+  }, [navTab, tab, refreshTrigger, fetchPortfolios]);
+
+  // 자동 슬라이더 (5초)
+  useEffect(() => {
+    if (sliderItems.length > 1 && navTab === 'home' && !selectedProject) {
+      const timer = setInterval(() => {
+        setSliderIndex((prev) => (prev + 1) % sliderItems.length);
+      }, 5000);
+      return () => clearInterval(timer);
+    }
+  }, [sliderItems, navTab, selectedProject]);
+
+  const handleTabChange = (c: Category) => {
+    setTab(c);
+    setSliderIndex(0);
   };
 
   const handleLogin = (userData: User, token: string) => {
@@ -123,56 +153,57 @@ const App = () => {
   );
 
   const renderContent = () => {
-    if (selectedProject) {
-      return <ProjectDetail project={selectedProject} onBack={() => setSelectedProject(null)} />;
-    }
+    if (selectedProject) return <ProjectDetail project={selectedProject} onBack={() => setSelectedProject(null)} />;
+
     if (navTab === 'register') {
-      return <RegisterPage onBack={() => setNavTab('home')} onSuccess={() => { setNavTab('home'); fetchPortfolios(); }} />;
+      return (
+        <RegisterPage
+          onBack={() => setNavTab('home')}
+          onSuccess={() => {
+            setNavTab('home');
+            setSliderIndex(0);
+            setRefreshTrigger(prev => prev + 1);
+          }}
+        />
+      );
     }
-    if (navTab === 'mypage' && user) {
+
+    if (navTab === 'mypage' && user)
       return <MyPage user={user} onBack={() => setNavTab('home')} onRegister={() => setNavTab('register')} />;
-    }
+
     return (
       <>
-        <Nav>
-          {(['전체', '앱', '웹', '디자인', '게임'] as Category[]).map(c => (
-            <TabButton key={c} $active={tab === c} onClick={() => setTab(c)}>{c}</TabButton>
-          ))}
-        </Nav>
-
-        {featuredMedia.length > 0 && (
-          <SliderSection>
-            <SliderWrapper>
-              {featuredMedia[sliderIndex].media_type === 'video' ? (
-                <SliderVideo
-                  key={sliderIndex}
-                  src={featuredMedia[sliderIndex].media_url}
-                  autoPlay muted loop playsInline
-                />
-              ) : (
-                <SliderImage
-                  key={sliderIndex}
-                  src={featuredMedia[sliderIndex].media_url}
-                  alt={featuredMedia[sliderIndex].title}
-                />
-              )}
-              <SliderOverlay>
-                <SliderTitle>{featuredMedia[sliderIndex].title}</SliderTitle>
-              </SliderOverlay>
-              {featuredMedia.length > 1 && (
+        {sliderItems.length > 0 && (
+          <MainSliderSection>
+            <SliderContainer>
+              <SliderTrack $currentIndex={sliderIndex}>
+                {sliderItems.map((item, idx) => (
+                  <SlideItem key={idx} onDoubleClick={() => setSelectedProject(item.projectRef)}>
+                    <img src={getImageUrl(item.image)} alt={item.title} />
+                    <SliderOverlay><h2>{item.title}</h2></SliderOverlay>
+                  </SlideItem>
+                ))}
+              </SliderTrack>
+              {sliderItems.length > 1 && (
                 <>
-                  <SliderBtn $left onClick={() => setSliderIndex(i => (i - 1 + featuredMedia.length) % featuredMedia.length)}>‹</SliderBtn>
-                  <SliderBtn onClick={() => setSliderIndex(i => (i + 1) % featuredMedia.length)}>›</SliderBtn>
+                  <SliderArrowBtn $left onClick={() => setSliderIndex(i => (i - 1 + sliderItems.length) % sliderItems.length)}>‹</SliderArrowBtn>
+                  <SliderArrowBtn onClick={() => setSliderIndex(i => (i + 1) % sliderItems.length)}>›</SliderArrowBtn>
                   <SliderDots>
-                    {featuredMedia.map((_, i) => (
+                    {sliderItems.map((_, i) => (
                       <Dot key={i} $active={i === sliderIndex} onClick={() => setSliderIndex(i)} />
                     ))}
                   </SliderDots>
                 </>
               )}
-            </SliderWrapper>
-          </SliderSection>
+            </SliderContainer>
+          </MainSliderSection>
         )}
+
+        <Nav>
+          {(['전체', '앱', '웹', '디자인', '게임'] as Category[]).map(c => (
+            <TabButton key={c} $active={tab === c} onClick={() => handleTabChange(c)}>{c}</TabButton>
+          ))}
+        </Nav>
 
         <GridMain>
           {loading ? (
@@ -183,10 +214,7 @@ const App = () => {
             portfolios.map(item => (
               <GridItem key={item.id} onDoubleClick={() => setSelectedProject(item)}>
                 <div className="image-box">
-                  <img
-                    src={item.main_image ? item.main_image : '/artifact-logo.png'}
-                    alt={item.title}
-                  />
+                  <img src={getImageUrl(item.main_image)} alt={item.title} />
                   <div className="card-info">
                     <span className="cat">{item.category}</span>
                     <span className="id">{String(item.id).padStart(2, '0')}</span>
@@ -194,6 +222,7 @@ const App = () => {
                   <div className="hover-tip">더블 클릭 하세요!</div>
                 </div>
                 <div className="title-label">{item.title}</div>
+                {item.nickname && <div className="nickname-label">by {item.nickname}</div>}
               </GridItem>
             ))
           )}
@@ -221,7 +250,7 @@ const App = () => {
       <PageWrapper>
         <TopArea>
           <Header>
-            <LogoWrapper>
+            <LogoWrapper onClick={handleNavHome} style={{ cursor: 'pointer' }}>
               <Logo src="/artifact-logo.png" alt="ARTIFACT" />
             </LogoWrapper>
             <HeaderRight>
@@ -243,10 +272,7 @@ const App = () => {
             </NavPanelInner>
           </NavPanel>
         </TopArea>
-
-        <ContentArea>
-          {renderContent()}
-        </ContentArea>
+        <ContentArea>{renderContent()}</ContentArea>
       </PageWrapper>
     </>
   );
@@ -254,134 +280,154 @@ const App = () => {
 
 export default App;
 
-const PageWrapper = styled.div`
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-`;
-
-const TopArea = styled.div`
-  width: 100%;
-  padding-bottom: 20px;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 40px;
-`;
+/* ── 레이아웃 ── */
+const PageWrapper = styled.div` width: 100%; min-height: 100vh; display: flex; flex-direction: column; `;
+const TopArea = styled.div` width: 100%; padding-bottom: 20px; `;
+const Header = styled.div` display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; `;
 const LogoWrapper = styled.div``;
-const Logo = styled.img` height: 80px; width: auto; `;
+const Logo = styled.img` height: 50px; width: auto; object-fit: contain; `;
 const HeaderRight = styled.div` display: flex; align-items: center; gap: 12px; `;
 const NicknameText = styled.span` font-size: 15px; color: rgba(255,255,255,0.8); font-weight: 600; `;
+
+/* ── 헤더 버튼 ── */
 const HeaderButton = styled.button<{ $outline?: boolean }>`
-  padding: 10px 20px; border-radius: 50px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s;
+  padding: 12px 24px; border-radius: 50px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s;
   ${props => props.$outline ? css`
-    background: transparent; border: 1px solid rgba(255,255,255,0.3); color: rgba(255,255,255,0.7);
-    &:hover { border-color: white; color: white; }
+    background: transparent;
+    border: 1px solid rgba(159,151,232,0.45);
+    color: rgba(191,186,242,0.85);
+    &:hover { border-color: #bfbaf2; color: #bfbaf2; }
   ` : css`
-    background: linear-gradient(135deg, #7b2cbf, #ff85a1); border: none; color: white;
-    &:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(123,44,191,0.4); }
+    background: #7c6fcd;
+    border: none;
+    color: #ffffff;
+    &:hover { transform: translateY(-2px); box-shadow: 0 5px 18px rgba(124,111,205,0.5); background: #9187d8; }
   `}
 `;
 
-const NavPanel = styled.div`
-  display: flex;
-  justify-content: center;
-  padding: 0 40px;
-`;
+/* ── 네비게이션 패널 ── */
+const NavPanel = styled.div` display: flex; justify-content: center; padding: 0 40px; margin-top: 10px; `;
 const NavPanelInner = styled.div`
-  display: flex; gap: 8px;
-  background: rgba(255,255,255,0.08);
+  display: flex; gap: 10px;
+  background: rgba(20,24,40,0.8);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 50px;
-  padding: 6px;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 50px; padding: 8px;
 `;
 const NavItem = styled.button<{ $active: boolean }>`
-  padding: 12px 40px; border-radius: 50px; font-size: 15px; font-weight: 700;
+  padding: 12px 45px; border-radius: 50px; font-size: 16px; font-weight: 700;
   cursor: pointer; border: none; transition: all 0.3s;
   ${props => props.$active ? css`
-    background: linear-gradient(135deg, #7b2cbf, #ff85a1); color: white;
-    box-shadow: 0 4px 12px rgba(123,44,191,0.4);
+    background: #7c6fcd;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(124,111,205,0.4);
   ` : css`
-    background: transparent; color: rgba(255,255,255,0.6);
-    &:hover { background: rgba(255,255,255,0.1); color: white; }
+    background: transparent; color: rgba(255,255,255,0.45);
+    &:hover { background: rgba(255,255,255,0.05); color: white; }
   `}
 `;
+const ContentArea = styled.div` flex: 1; width: 100%; `;
 
-const ContentArea = styled.div`
-  flex: 1;
-  padding-top: 30px;
+/* ── 슬라이더 ── */
+const MainSliderSection = styled.section` width: 100%; padding: 0 60px; margin-bottom: 10px; `;
+const SliderContainer = styled.div`
+  position: relative; width: 100%; aspect-ratio: 16/6; border-radius: 24px; overflow: hidden;
+  background: #111623;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+`;
+const SliderTrack = styled.div<{ $currentIndex: number }>`
+  display: flex; width: 100%; height: 100%;
+  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  transform: translateX(${props => -(props.$currentIndex * 100)}%);
+`;
+const SlideItem = styled.div`
+  min-width: 100%; width: 100%; height: 100%; position: relative; flex-shrink: 0; cursor: pointer;
+  img { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; }
+`;
+const SliderOverlay = styled.div`
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 65%);
+  display: flex; flex-direction: column; justify-content: flex-end; padding: 50px;
+  h2 { font-size: 36px; margin: 0; font-weight: 800; color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+`;
+const SliderArrowBtn = styled.button<{ $left?: boolean }>`
+  position: absolute; top: 50%; transform: translateY(-50%);
+  ${p => p.$left ? 'left: 30px;' : 'right: 30px;'}
+  background: rgba(20,24,40,0.6);
+  border: 1px solid rgba(159,151,232,0.25);
+  color: #bfbaf2;
+  font-size: 36px; width: 50px; height: 50px; border-radius: 50%; backdrop-filter: blur(4px);
+  cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5;
+  transition: all 0.2s ease;
+  &:hover {
+    background: #7c6fcd;
+    color: #ffffff;
+    border-color: transparent;
+    transform: translateY(-50%) scale(1.08);
+  }
+`;
+const SliderDots = styled.div` position: absolute; bottom: 35px; right: 50px; display: flex; gap: 8px; z-index: 5; `;
+const Dot = styled.button<{ $active: boolean }>`
+  width: ${p => p.$active ? '26px' : '9px'}; height: 9px; border-radius: 10px; border: none; cursor: pointer;
+  background: ${p => p.$active ? '#7c6fcd' : 'rgba(255,255,255,0.25)'};
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 `;
 
-const Nav = styled.nav` display: flex; justify-content: center; gap: 40px; margin-bottom: 70px; `;
+/* ── 카테고리 탭 ── */
+const Nav = styled.nav` display: flex; justify-content: center; gap: 16px; margin: 40px 0; `;
 const TabButton = styled.button<{ $active: boolean }>`
-  padding: 14px 42px; border-radius: 50px; font-size: 18px; font-weight: 800;
-  cursor: pointer; border: none; outline: none;
-  transition: all 0.5s cubic-bezier(0.68, -0.6, 0.32, 1.6);
+  padding: 14px 36px; border-radius: 50px; font-size: 16px; font-weight: 700;
+  cursor: pointer; border: 1px solid transparent; outline: none; transition: all 0.2s ease;
   ${props => props.$active ? css`
-    background: linear-gradient(135deg, #7b2cbf 0%, #ff85a1 100%); color: white;
-    box-shadow: 0 10px 20px rgba(123, 44, 191, 0.4); transform: translateY(-12px) scale(1.12);
+    background: #7c6fcd;
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 4px 15px rgba(124,111,205,0.3);
   ` : css`
-    background: rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.5); backdrop-filter: blur(10px);
-    &:hover { background: rgba(255, 255, 255, 0.2); color: white; transform: translateY(-5px) scale(1.05); }
+    background: #1c2440;
+    color: rgba(255,255,255,0.45);
+    border-color: rgba(255,255,255,0.06);
+    &:hover { background: #222e50; color: white; }
   `}
 `;
+
+/* ── 그리드 ── */
 const GridMain = styled.main` display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; padding: 0 60px 100px; `;
 const GridItem = styled.div`
   display: flex; flex-direction: column; cursor: pointer;
   .image-box {
-    width: 100%; aspect-ratio: 16 / 10; overflow: hidden; position: relative; border-radius: 24px; background: rgba(0,0,0,0.3);
-    img { width: 100%; height: 100%; object-fit: cover; transition: 0.6s ease; }
-    .card-info { position: absolute; top: 15px; left: 20px; right: 20px; display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; }
-    .hover-tip { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); opacity: 0; transition: 0.3s; }
+    width: 100%; aspect-ratio: 16 / 10; overflow: hidden; position: relative;
+    border-radius: 16px; background: #1c2440; border: 1px solid rgba(255,255,255,0.05);
+    img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s ease; }
+    .card-info { position: absolute; top: 15px; left: 20px; right: 20px; display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; z-index: 2; }
+    .cat { background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 5px; }
+    .id { background: rgba(124,111,205,0.7); padding: 4px 10px; border-radius: 5px; }
+    .hover-tip { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); opacity: 0; transition: 0.3s; z-index: 1; }
   }
-  &:hover img { transform: scale(1.08); }
+  &:hover img { transform: scale(1.04); }
   &:hover .hover-tip { opacity: 1; }
-  .title-label { padding: 15px 5px; text-align: center; font-size: 18px; font-weight: 700; }
+  .title-label { padding: 15px 5px 2px 5px; text-align: left; font-size: 18px; font-weight: 700; color: #eef0f8; }
+  .nickname-label { padding: 2px 5px 0; font-size: 13px; color: rgba(255,255,255,0.4); }
 `;
-const LoadingText = styled.div` grid-column: 1/-1; text-align: center; padding: 60px; color: rgba(255,255,255,0.5); font-size: 16px; `;
-const EmptyText = styled.div` grid-column: 1/-1; text-align: center; padding: 60px; color: rgba(255,255,255,0.4); font-size: 16px; `;
-const Footer = styled.footer` padding: 80px 60px; background: rgba(0, 0, 0, 0.3); border-top: 1px solid rgba(255, 255, 255, 0.05); `;
-const FooterContent = styled.div` max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; `;
-const GithubLink = styled.a` display: flex; align-items: center; gap: 12px; text-decoration: none; color: white; background: rgba(255, 255, 255, 0.1); padding: 12px 24px; border-radius: 12px; transition: 0.3s; font-weight: 600; &:hover { background: rgba(255, 255, 255, 0.2); transform: translateY(-3px); } `;
-const SliderSection = styled.section`
-  width: 100%; margin-bottom: 60px; padding: 0 60px;
+const LoadingText = styled.div` grid-column: 1/-1; text-align: center; padding: 100px; color: rgba(255,255,255,0.4); font-size: 16px; `;
+const EmptyText = styled.div` grid-column: 1/-1; text-align: center; padding: 100px; color: rgba(255,255,255,0.3); font-size: 16px; `;
+
+/* ── 푸터 ── */
+const Footer = styled.footer`
+  padding: 60px;
+  background: #0d1022;
+  border-top: 1px solid rgba(124,111,205,0.15);
 `;
-const SliderWrapper = styled.div`
-  position: relative; width: 100%; aspect-ratio: 16/6;
-  border-radius: 24px; overflow: hidden; background: rgba(0,0,0,0.5);
+const FooterContent = styled.div`
+  max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;
+  h3 { margin: 0 0 5px 0; font-size: 20px; color: #ffffff; }
+  p { margin: 0; font-size: 14px; color: #ffffff; }
 `;
-const SliderImage = styled.img`
-  width: 100%; height: 100%; object-fit: cover;
-`;
-const SliderVideo = styled.video`
-  width: 100%; height: 100%; object-fit: cover;
-`;
-const SliderOverlay = styled.div`
-  position: absolute; bottom: 0; left: 0; right: 0;
-  padding: 40px; background: linear-gradient(transparent, rgba(0,0,0,0.7));
-`;
-const SliderTitle = styled.h2`
-  font-size: 28px; font-weight: 800; margin: 0; color: white;
-`;
-const SliderBtn = styled.button<{ $left?: boolean }>`
-  position: absolute; top: 50%; transform: translateY(-50%);
-  ${p => p.$left ? 'left: 20px;' : 'right: 20px;'}
-  background: rgba(0,0,0,0.5); border: none; color: white;
-  font-size: 36px; width: 50px; height: 50px; border-radius: 50%;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  &:hover { background: rgba(123,44,191,0.7); }
-`;
-const SliderDots = styled.div`
-  position: absolute; bottom: 20px; right: 20px;
-  display: flex; gap: 8px;
-`;
-const Dot = styled.button<{ $active: boolean }>`
-  width: 8px; height: 8px; border-radius: 50%; border: none; cursor: pointer;
-  background: ${p => p.$active ? '#ff85a1' : 'rgba(255,255,255,0.4)'};
-  transition: 0.3s;
+const GithubLink = styled.a`
+  display: flex; align-items: center; gap: 12px; text-decoration: none;
+  color: #ffffff;
+  background: #1a1f3a;
+  padding: 10px 20px; border-radius: 10px; transition: 0.3s; font-size: 14px; font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  &:hover { background: #1a1f3a; border-color: rgba(124,111,205,0.3); color: #ffffff; }
 `;

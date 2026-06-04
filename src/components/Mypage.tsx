@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { portfolioAPI } from '../Api';
 
+const getImageUrl = (url: string | undefined): string => {
+  if (!url) return '/artifact-logo.png';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `http://localhost:4000${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 interface Portfolio {
   id: number;
   title: string;
@@ -80,7 +86,7 @@ const MyPage: React.FC<MyPageProps> = ({ user, onBack, onRegister }) => {
 
   return (
     <Container>
-      <BackButton onClick={onBack}>← 메인으로</BackButton>
+      {/* 💡 제거 완료: <BackButton> 태그를 삭제했습니다. */}
 
       <ProfileSection>
         <Avatar>👤</Avatar>
@@ -107,7 +113,7 @@ const MyPage: React.FC<MyPageProps> = ({ user, onBack, onRegister }) => {
             <Card key={p.id}>
               <CardImage>
                 {p.main_image
-                  ? <img src={`http://localhost:4000${p.main_image}`} alt={p.title} />
+                  ? <img src={getImageUrl(p.main_image)} alt={p.title} />
                   : <NoImage>🖼️</NoImage>
                 }
                 <Badge $public={p.is_public}>{p.is_public ? '공개' : '비공개'}</Badge>
@@ -198,12 +204,7 @@ const Container = styled.div`
   animation: ${fadeIn} 0.4s ease;
 `;
 
-const BackButton = styled.button`
-  background: none; border: none;
-  color: rgba(255,255,255,0.6); font-size: 16px;
-  cursor: pointer; margin-bottom: 30px; display: block;
-  &:hover { color: white; }
-`;
+// 💡 제거 완료: 사용하지 않는 BackButton 스타일 컴포넌트를 삭제했습니다.
 
 const ProfileSection = styled.div`
   display: flex;
