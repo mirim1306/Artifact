@@ -50,21 +50,17 @@ const MyPage: React.FC<MyPageProps> = ({ user, onBack, onRegister, onEdit, onLog
   useEffect(() => { fetchPortfolios(); }, []);
 
   const handleWithdraw = async () => {
-    if (!window.confirm(`정말로 탈퇴하시겠습니까?\n탈퇴하면 모든 포트폴리오가 삭제됩니다.`)) return;
     const res = await authAPI.withdraw();
     if (res.success) {
-      alert('탈퇴가 완료되었습니다.');
       onLogout();
     } else {
-      alert(res.message || '탈퇴 처리 중 오류가 발생했습니다.');
+
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('정말 삭제하시겠습니까?')) return;
     const res = await portfolioAPI.delete(id);
     if (res.success) {
-      alert('삭제되었습니다.');
       fetchPortfolios();
     }
   };

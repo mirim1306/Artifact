@@ -257,7 +257,7 @@ app.get('/api/portfolios', optionalAuth, async (req, res) => {
 
     if (category && category !== '전체') {
       params.push(category);
-      query += ` AND p.category = $${params.length}`;
+      query += ` AND (p.category = $${params.length} OR (p.sub_categories IS NOT NULL AND p.sub_categories ILIKE '%' || $${params.length} || '%'))`;
     }
     if (search) {
       params.push(`%${search}%`);
@@ -353,7 +353,7 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
     title, category, service_intro,
     main_features, tech_environment,
     team_members, dev_period, github_link, is_public,
-    run_link, file_link, store_link, design_tool,
+    run_link, file_link, store_link, design_tool, sub_categories,
   } = req.body;
 
   if (!title || !category)
@@ -367,13 +367,13 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
 
     const result = await pool.query(
       `INSERT INTO portfolios
-        (user_id, title, category, main_image, service_intro,
+        (user_id, title, category, sub_categories, main_image, service_intro,
         main_features, tech_environment, team_members, dev_period,
         github_link, is_public, run_link, file_link, store_link, design_tool)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
        RETURNING *`,
       [
-        req.user.id, title, category, main_image_url,
+        req.user.id, title, category, sub_categories || null, main_image_url,
         service_intro || null, main_features || null,
         tech_environment || null, team_members || null,
         dev_period || null, github_link || null,
@@ -411,7 +411,7 @@ app.put('/api/portfolios/:id', authMiddleware, upload.fields([
     title, category, service_intro,
     main_features, tech_environment,
     team_members, dev_period, github_link, is_public,
-    run_link, file_link, store_link, design_tool,
+    run_link, file_link, store_link, design_tool, sub_categories,
   } = req.body;
 
   try {
@@ -582,4 +582,38 @@ app.delete('/api/comments/:id', authMiddleware, async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`✅ 서버가 포트 ${PORT}에서 실행중입니다.`);
+});
+
+// ══════════════════════════════════════════════════════════════
+// 계정 탈퇴 API
+// ══════════════════════════════════════════════════════════════
+
+app.delete('/api/users/me', authMiddleware, async (req, res) => {
+  try {
+    // 내 포트폴리오의 Cloudinary 파일들 삭제
+    if (useCloudinary) {
+      const portfolios = await pool.query(
+        'SELECT main_image FROM portfolios WHERE user_id = $1', [req.user.id]
+      );
+      const mediaRows = await pool.query(
+        `SELECT pm.media_url FROM portfolio_media pm
+         JOIN portfolios p ON pm.portfolio_id = p.id
+         WHERE p.user_id = $1`, [req.user.id]
+      ).catch(() => ({ rows: [] }));
+
+      const allUrls = [
+        ...portfolios.rows.map(r => r.main_image),
+        ...mediaRows.rows.map(r => r.media_url),
+      ].filter(Boolean);
+
+      await Promise.all(allUrls.map(url => deleteFromCloudinary(url)));
+    }
+
+    // users 삭제 시 CASCADE로 portfolios, likes, comments도 전부 삭제됨
+    await pool.query('DELETE FROM users WHERE id = $1', [req.user.id]);
+    res.json({ success: true, message: '계정이 삭제되었습니다.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: '탈퇴 처리 중 오류가 발생했습니다.' });
+  }
 });

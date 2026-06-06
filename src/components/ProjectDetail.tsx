@@ -79,13 +79,13 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
   }, [project.id, currentUserId]);
 
   const handleLike = async () => {
-    if (!currentUserId) { alert('로그인이 필요합니다.'); return; }
+    if (!currentUserId) return;
     const res = await likeAPI.toggle(project.id);
     if (res.success) { setLiked(res.liked); setLikeCount(res.count); }
   };
 
   const handleAddComment = async () => {
-    if (!currentUserId) { alert('로그인이 필요합니다.'); return; }
+    if (!currentUserId) return;
     if (!commentInput.trim()) return;
     setCommentLoading(true);
     const res = await commentAPI.create(project.id, commentInput);
@@ -97,7 +97,6 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
   };
 
   const handleDeleteComment = async (id: number) => {
-    if (!window.confirm('댓글을 삭제하시겠습니까?')) return;
     const res = await commentAPI.delete(id);
     if (res.success) setComments(comments.filter(c => c.id !== id));
   };
@@ -106,7 +105,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
   const handleRunService = () => {
     if (isRunLoading) return;
     const url = getUrl();
-    if (!url) { alert('아직 서비스 URL이 등록되지 않은 프로젝트입니다.'); return; }
+    if (!url) return;
     setIsRunLoading(true);
     setTimeout(() => {
       const isDownload = url.includes('/releases/download/');
