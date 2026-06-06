@@ -66,6 +66,8 @@ const App = () => {
   const [sliderItems, setSliderItems] = useState<SliderItem[]>([]);
   const [sliderIndex, setSliderIndex] = useState(0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sort, setSort] = useState<'latest' | 'likes' | 'views'>('latest');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -73,10 +75,10 @@ const App = () => {
     if (token && savedUser) setUser(JSON.parse(savedUser));
   }, []);
 
-  const fetchPortfolios = useCallback(async (currentTab: Category) => {
+  const fetchPortfolios = useCallback(async (currentTab: Category, currentSort = 'latest') => {
     setLoading(true);
     try {
-      const res = await portfolioAPI.getAll(currentTab === '전체' ? undefined : currentTab);
+      const res = await portfolioAPI.getAll(currentTab === '전체' ? undefined : currentTab, currentSort !== 'latest' ? currentSort : undefined);
       if (res && res.success && Array.isArray(res.portfolios)) {
         setPortfolios(res.portfolios);
         const itemsForSlider = res.portfolios.slice(0, 5).map((p: Project) => ({
@@ -95,8 +97,8 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (navTab === 'home') fetchPortfolios(tab);
-  }, [navTab, tab, refreshTrigger, fetchPortfolios]);
+    if (navTab === 'home') fetchPortfolios(tab, sort);
+  }, [navTab, tab, sort, refreshTrigger, fetchPortfolios]);
 
   // 자동 슬라이더 (5초)
   useEffect(() => {
@@ -199,11 +201,29 @@ const App = () => {
           </MainSliderSection>
         )}
 
-        <Nav>
-          {(['전체', '앱', '웹', '디자인', '게임'] as Category[]).map(c => (
+        <SearchRow>
+          <SearchInput
+            type="text"
+            placeholder="제목, 기술 스택, 팀원 이름으로 검색..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') fetchPortfolios(tab, sort); }}
+          />
+          <SearchBtn onClick={() => fetchPortfolios(tab, sort)}>검색</SearchBtn>
+        </SearchRow>
+
+        <ControlRow>
+          <Nav>
+            {(['전체', '앱', '웹', '디자인', '게임'] as Category[]).map(c => (
             <TabButton key={c} $active={tab === c} onClick={() => handleTabChange(c)}>{c}</TabButton>
           ))}
-        </Nav>
+          </Nav>
+          <SortRow>
+            {([['latest','최신순'], ['likes','좋아요순'], ['views','조회순']] as const).map(([key, label]) => (
+              <SortBtn key={key} $active={sort === key} onClick={() => setSort(key)}>{label}</SortBtn>
+            ))}
+          </SortRow>
+        </ControlRow>
 
         <GridMain>
           {loading ? (
@@ -223,6 +243,10 @@ const App = () => {
                 </div>
                 <div className="title-label">{item.title}</div>
                 {item.nickname && <div className="nickname-label">by {item.nickname}</div>}
+                <div className="stats-row">
+                  <span>❤️ {(item as any).like_count || 0}</span>
+                  <span>👁 {(item as any).view_count || 0}</span>
+                </div>
               </GridItem>
             ))
           )}
@@ -408,9 +432,31 @@ const GridItem = styled.div`
   &:hover .hover-tip { opacity: 1; }
   .title-label { padding: 15px 5px 2px 5px; text-align: left; font-size: 18px; font-weight: 700; color: #eef0f8; }
   .nickname-label { padding: 2px 5px 0; font-size: 13px; color: rgba(255,255,255,0.4); }
+  .stats-row { display: flex; gap: 12px; padding: 4px 5px 0; font-size: 12px; color: rgba(255,255,255,0.35); }
 `;
 const LoadingText = styled.div` grid-column: 1/-1; text-align: center; padding: 100px; color: rgba(255,255,255,0.4); font-size: 16px; `;
 const EmptyText = styled.div` grid-column: 1/-1; text-align: center; padding: 100px; color: rgba(255,255,255,0.3); font-size: 16px; `;
+
+const SearchRow = styled.div` display: flex; gap: 12px; padding: 0 60px; margin-bottom: 0; `;
+const SearchInput = styled.input`
+  flex: 1; padding: 14px 20px; border-radius: 50px; font-size: 15px;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); color: white; outline: none;
+  &::placeholder { color: rgba(255,255,255,0.3); }
+  &:focus { border-color: #7c6fcd; }
+`;
+const SearchBtn = styled.button`
+  padding: 14px 28px; border-radius: 50px; font-size: 15px; font-weight: 700;
+  background: #7c6fcd; border: none; color: white; cursor: pointer;
+  &:hover { background: #9187d8; }
+`;
+const ControlRow = styled.div` display: flex; justify-content: space-between; align-items: center; padding: 0 60px; margin: 20px 0; `;
+const SortRow = styled.div` display: flex; gap: 8px; `;
+const SortBtn = styled.button<{ $active: boolean }>`
+  padding: 10px 20px; border-radius: 50px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid transparent;
+  background: ${p => p.$active ? '#7c6fcd' : 'rgba(255,255,255,0.07)'};
+  color: ${p => p.$active ? 'white' : 'rgba(255,255,255,0.5)'};
+  &:hover { background: ${p => p.$active ? '#7c6fcd' : 'rgba(255,255,255,0.12)'}; color: white; }
+`;
 
 /* ── 푸터 ── */
 const Footer = styled.footer`

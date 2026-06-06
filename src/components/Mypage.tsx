@@ -22,6 +22,9 @@ interface Portfolio {
   dev_period: string;
   is_public: boolean;
   created_at: string;
+  like_count?: number;
+  view_count?: number;
+  tags?: string[];
 }
 
 interface MyPageProps {
@@ -124,6 +127,13 @@ const MyPage: React.FC<MyPageProps> = ({ user, onBack, onRegister }) => {
                 <CardDesc>{p.description}</CardDesc>
                 {p.tech_stack && <TechStack>{p.tech_stack}</TechStack>}
                 <CardDate>{new Date(p.created_at).toLocaleDateString('ko-KR')}</CardDate>
+                <CardStats>
+                  <span>❤️ {p.like_count || 0}</span>
+                  <span>👁 {p.view_count || 0}</span>
+                </CardStats>
+                {p.tags && p.tags.length > 0 && (
+                  <CardTags>{p.tags.map((t, i) => <span key={i}>#{t}</span>)}</CardTags>
+                )}
                 <ButtonRow>
                   <EditBtn onClick={() => handleEditOpen(p)}>수정</EditBtn>
                   <DeleteBtn onClick={() => handleDelete(p.id)}>삭제</DeleteBtn>
@@ -292,6 +302,11 @@ const CardTitle = styled.h3` font-size: 16px; font-weight: 700; margin: 0; `;
 const CardDesc = styled.p` font-size: 13px; color: rgba(255,255,255,0.6); margin: 0; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; `;
 const TechStack = styled.p` font-size: 12px; color: rgba(255,255,255,0.4); margin: 0; `;
 const CardDate = styled.p` font-size: 12px; color: rgba(255,255,255,0.3); margin: 0; `;
+const CardStats = styled.div` display: flex; gap: 12px; font-size: 12px; color: rgba(255,255,255,0.35); `;
+const CardTags = styled.div`
+  display: flex; flex-wrap: wrap; gap: 4px;
+  span { font-size: 11px; color: #bfbaf2; background: rgba(124,111,205,0.2); padding: 2px 8px; border-radius: 50px; }
+`;
 
 const ButtonRow = styled.div` display: flex; gap: 8px; margin-top: 8px; `;
 const EditBtn = styled.button`

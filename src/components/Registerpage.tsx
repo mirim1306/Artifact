@@ -14,6 +14,10 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
   const [error, setError] = useState('');
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
+  const [tagInput, setTagInput] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [designImages, setDesignImages] = useState<File[]>([]);
+  const [designImagePreviews, setDesignImagePreviews] = useState<string[]>([]);
 
   const [form, setForm] = useState({
     title: '',
@@ -59,6 +63,8 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
     const formData = new FormData();
     Object.entries(form).forEach(([key, value]) => formData.append(key, value));
     if (mainImageFile) formData.append('main_image', mainImageFile);
+    if (tags.length > 0) formData.append('tags', tags.join(','));
+    designImages.forEach(file => formData.append('media_files', file));
 
     const res = await portfolioAPI.create(formData);
     setLoading(false);
@@ -157,7 +163,64 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess }) => {
             <>
               <Label>사용 툴</Label>
               <Input name="design_tool" placeholder="Figma, Photoshop, Illustrator..." value={form.design_tool} onChange={handleChange} />
+              <Label>추가 이미지 <Hint>(최대 10장, 작업물 상세 이미지)</Hint></Label>
+              <MultiImageUploadBox onClick={() => document.getElementById('designImagesInput')?.click()}>
+                {designImagePreviews.length > 0 ? (
+                  <PreviewGrid>
+                    {designImagePreviews.map((src, i) => (
+                      <PreviewThumb key={i}>
+                        <img src={src} alt={`design-${i}`} />
+                        <RemoveBtn onClick={e => {
+                          e.stopPropagation();
+                          setDesignImages(prev => prev.filter((_, idx) => idx !== i));
+                          setDesignImagePreviews(prev => prev.filter((_, idx) => idx !== i));
+                        }}>×</RemoveBtn>
+                      </PreviewThumb>
+                    ))}
+                    {designImagePreviews.length < 10 && <AddMoreBtn>+ 추가</AddMoreBtn>}
+                  </PreviewGrid>
+                ) : (
+                  <UploadPlaceholder>🖼️ 클릭하여 추가 이미지 업로드 (최대 10장)</UploadPlaceholder>
+                )}
+              </MultiImageUploadBox>
+              <input id="designImagesInput" type="file" accept="image/*" multiple style={{ display: 'none' }}
+                onChange={e => {
+                  const files = Array.from(e.target.files || []).slice(0, 10 - designImages.length);
+                  setDesignImages(prev => [...prev, ...files].slice(0, 10));
+                  setDesignImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))].slice(0, 10));
+                  e.target.value = '';
+                }}
+              />
             </>
+          )}
+
+          <Label>태그 <Hint>(Enter로 추가, 기술 스택·키워드)</Hint></Label>
+          <TagInputRow>
+            <Input
+              placeholder="예: React, Unity, Figma..."
+              value={tagInput}
+              onChange={e => setTagInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const t = tagInput.trim();
+                  if (t && !tags.includes(t) && tags.length < 10) {
+                    setTags([...tags, t]);
+                    setTagInput('');
+                  }
+                }
+              }}
+            />
+          </TagInputRow>
+          {tags.length > 0 && (
+            <TagList>
+              {tags.map((tag, i) => (
+                <TagItem key={i}>
+                  #{tag}
+                  <TagRemove onClick={() => setTags(tags.filter((_, idx) => idx !== i))}>×</TagRemove>
+                </TagItem>
+              ))}
+            </TagList>
           )}
 
           <Label>GitHub 링크</Label>
@@ -278,4 +341,41 @@ const SubmitButton = styled.button`
 
 const ErrorMsg = styled.p`
   color: #ff6b6b; font-size: 14px; text-align: center; margin: 0;
+`;
+
+const TagInputRow = styled.div` display: flex; gap: 8px; `;
+const TagList = styled.div` display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; `;
+const TagItem = styled.span`
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 50px; font-size: 12px; font-weight: 700;
+  background: rgba(124,111,205,0.2); border: 1px solid rgba(124,111,205,0.4); color: #bfbaf2;
+`;
+const TagRemove = styled.button`
+  background: none; border: none; color: #bfbaf2; cursor: pointer; padding: 0; font-size: 14px;
+  &:hover { color: white; }
+`;
+
+const MultiImageUploadBox = styled.div`
+  width: 100%; min-height: 120px; border-radius: 14px;
+  border: 2px dashed rgba(255,255,255,0.2); cursor: pointer;
+  padding: 12px; display: flex; align-items: center; justify-content: center; transition: 0.3s;
+  &:hover { border-color: #7b2cbf; }
+`;
+const PreviewGrid = styled.div`
+  display: flex; flex-wrap: wrap; gap: 8px; width: 100%;
+`;
+const PreviewThumb = styled.div`
+  position: relative; width: 80px; height: 80px; border-radius: 8px; overflow: hidden;
+  img { width: 100%; height: 100%; object-fit: cover; }
+`;
+const RemoveBtn = styled.button`
+  position: absolute; top: 2px; right: 2px; width: 20px; height: 20px;
+  border-radius: 50%; border: none; background: rgba(0,0,0,0.7); color: white;
+  font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  &:hover { background: #ff6b6b; }
+`;
+const AddMoreBtn = styled.div`
+  width: 80px; height: 80px; border-radius: 8px; border: 2px dashed rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: rgba(255,255,255,0.4);
 `;
