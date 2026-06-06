@@ -22,19 +22,22 @@ interface Portfolio {
   dev_period: string;
   is_public: boolean;
   created_at: string;
+  like_count?: number;
+  view_count?: number;
+  tags?: string[];
 }
 
 interface MyPageProps {
   user: { id: number; username: string; nickname: string; email: string };
   onBack: () => void;
   onRegister: () => void;
+  onEdit: (portfolio: Portfolio) => void;
 }
 
-const MyPage: React.FC<MyPageProps> = ({ user, onBack, onRegister }) => {
+const MyPage: React.FC<MyPageProps> = ({ user, onBack, onRegister, onEdit }) => {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editTarget, setEditTarget] = useState<Portfolio | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Portfolio>>({});
+
 
   const fetchPortfolios = async () => {
     setLoading(true);
@@ -54,35 +57,7 @@ const MyPage: React.FC<MyPageProps> = ({ user, onBack, onRegister }) => {
     }
   };
 
-  const handleEditOpen = (p: Portfolio) => {
-    setEditTarget(p);
-    setEditForm({
-      title: p.title,
-      description: p.description,
-      category: p.category,
-      run_link: p.run_link,
-      file_link: p.file_link,
-      github_link: p.github_link,
-      team_members: p.team_members,
-      tech_stack: p.tech_stack,
-      dev_period: p.dev_period,
-      is_public: p.is_public,
-    });
-  };
 
-  const handleEditSubmit = async () => {
-    if (!editTarget) return;
-    const formData = new FormData();
-    Object.entries(editForm).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) formData.append(key, String(value));
-    });
-    const res = await portfolioAPI.update(editTarget.id, formData);
-    if (res.success) {
-      alert('수정되었습니다!');
-      setEditTarget(null);
-      fetchPortfolios();
-    }
-  };
 
   return (
     <Container>
@@ -124,8 +99,12 @@ const MyPage: React.FC<MyPageProps> = ({ user, onBack, onRegister }) => {
                 <CardDesc>{p.description}</CardDesc>
                 {p.tech_stack && <TechStack>{p.tech_stack}</TechStack>}
                 <CardDate>{new Date(p.created_at).toLocaleDateString('ko-KR')}</CardDate>
+                <CardStats>
+                  <span>❤️ {p.like_count || 0}</span>
+                  <span>👁 {p.view_count || 0}</span>
+                </CardStats>
                 <ButtonRow>
-                  <EditBtn onClick={() => handleEditOpen(p)}>수정</EditBtn>
+                  <EditBtn onClick={() => onEdit(p)}>수정</EditBtn>
                   <DeleteBtn onClick={() => handleDelete(p.id)}>삭제</DeleteBtn>
                 </ButtonRow>
               </CardBody>
@@ -134,57 +113,6 @@ const MyPage: React.FC<MyPageProps> = ({ user, onBack, onRegister }) => {
         </Grid>
       )}
 
-      {/* 수정 모달 */}
-      {editTarget && (
-        <ModalOverlay onClick={() => setEditTarget(null)}>
-          <Modal onClick={e => e.stopPropagation()}>
-            <ModalTitle>포트폴리오 수정</ModalTitle>
-
-            <Label>제목</Label>
-            <Input value={editForm.title || ''} onChange={e => setEditForm({ ...editForm, title: e.target.value })} />
-
-            <Label>설명</Label>
-            <Textarea value={editForm.description || ''} onChange={e => setEditForm({ ...editForm, description: e.target.value })} rows={3} />
-
-            <Label>카테고리</Label>
-            <Select value={editForm.category || '웹'} onChange={e => setEditForm({ ...editForm, category: e.target.value })}>
-              <option value="웹">웹</option>
-              <option value="앱">앱</option>
-              <option value="게임">게임</option>
-              <option value="디자인">디자인</option>
-            </Select>
-
-            <Label>실행 링크</Label>
-            <Input value={editForm.run_link || ''} onChange={e => setEditForm({ ...editForm, run_link: e.target.value })} placeholder="https://..." />
-
-            <Label>파일 링크</Label>
-            <Input value={editForm.file_link || ''} onChange={e => setEditForm({ ...editForm, file_link: e.target.value })} placeholder="https://..." />
-
-            <Label>GitHub 링크</Label>
-            <Input value={editForm.github_link || ''} onChange={e => setEditForm({ ...editForm, github_link: e.target.value })} placeholder="https://github.com/..." />
-
-            <Label>팀원</Label>
-            <Input value={editForm.team_members || ''} onChange={e => setEditForm({ ...editForm, team_members: e.target.value })} />
-
-            <Label>기술 스택</Label>
-            <Input value={editForm.tech_stack || ''} onChange={e => setEditForm({ ...editForm, tech_stack: e.target.value })} />
-
-            <Label>개발 기간</Label>
-            <Input value={editForm.dev_period || ''} onChange={e => setEditForm({ ...editForm, dev_period: e.target.value })} />
-
-            <Label>공개 여부</Label>
-            <Select value={String(editForm.is_public)} onChange={e => setEditForm({ ...editForm, is_public: e.target.value === 'true' })}>
-              <option value="true">공개</option>
-              <option value="false">비공개</option>
-            </Select>
-
-            <ModalButtons>
-              <CancelBtn onClick={() => setEditTarget(null)}>취소</CancelBtn>
-              <SaveBtn onClick={handleEditSubmit}>저장</SaveBtn>
-            </ModalButtons>
-          </Modal>
-        </ModalOverlay>
-      )}
     </Container>
   );
 };
@@ -292,6 +220,7 @@ const CardTitle = styled.h3` font-size: 16px; font-weight: 700; margin: 0; `;
 const CardDesc = styled.p` font-size: 13px; color: rgba(255,255,255,0.6); margin: 0; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; `;
 const TechStack = styled.p` font-size: 12px; color: rgba(255,255,255,0.4); margin: 0; `;
 const CardDate = styled.p` font-size: 12px; color: rgba(255,255,255,0.3); margin: 0; `;
+const CardStats = styled.div` display: flex; gap: 12px; font-size: 12px; color: rgba(255,255,255,0.35); `;
 
 const ButtonRow = styled.div` display: flex; gap: 8px; margin-top: 8px; `;
 const EditBtn = styled.button`
@@ -305,52 +234,9 @@ const DeleteBtn = styled.button`
   &:hover { background: rgba(255,107,107,0.4); }
 `;
 
-const ModalOverlay = styled.div`
-  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
-  display: flex; align-items: center; justify-content: center; z-index: 1000;
-`;
 
-const Modal = styled.div`
-  background: #1a1a2e; border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 24px; padding: 32px; width: 100%; max-width: 500px;
-  max-height: 80vh; overflow-y: auto;
-  display: flex; flex-direction: column; gap: 8px;
-`;
 
-const ModalTitle = styled.h2` font-size: 22px; font-weight: 800; margin-bottom: 16px; `;
 
-const Label = styled.label` font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.7); margin-top: 8px; `;
 
-const Input = styled.input`
-  padding: 10px 14px; border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.08); color: white; font-size: 14px; outline: none;
-  &::placeholder { color: rgba(255,255,255,0.3); }
-  &:focus { border-color: #7b2cbf; }
-`;
 
-const Textarea = styled.textarea`
-  padding: 10px 14px; border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.08); color: white; font-size: 14px; outline: none;
-  resize: vertical; font-family: inherit;
-  &:focus { border-color: #7b2cbf; }
-`;
 
-const Select = styled.select`
-  padding: 10px 14px; border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(30,30,60,0.9); color: white; font-size: 14px; outline: none; cursor: pointer;
-`;
-
-const ModalButtons = styled.div` display: flex; gap: 10px; margin-top: 16px; `;
-const CancelBtn = styled.button`
-  flex: 1; padding: 12px; border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.2); background: transparent;
-  color: white; font-size: 15px; font-weight: 700; cursor: pointer;
-`;
-const SaveBtn = styled.button`
-  flex: 1; padding: 12px; border-radius: 12px; border: none;
-  background: linear-gradient(135deg, #7b2cbf, #ff85a1);
-  color: white; font-size: 15px; font-weight: 700; cursor: pointer;
-`;

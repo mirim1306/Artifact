@@ -247,10 +247,12 @@ app.get('/api/portfolios', optionalAuth, async (req, res) => {
       SELECT p.*, u.nickname,
         COUNT(DISTINCT l.id) AS like_count,
         ${userId ? `BOOL_OR(l.user_id = ${parseInt(userId)}) AS liked_by_me,` : 'false AS liked_by_me,'}
-        COALESCE(p.view_count, 0) AS view_count
+        COALESCE(p.view_count, 0) AS view_count,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT t.tag), NULL) AS tags
       FROM portfolios p
       JOIN users u ON p.user_id = u.id
       LEFT JOIN portfolio_likes l ON l.portfolio_id = p.id
+      LEFT JOIN portfolio_tags t ON t.portfolio_id = p.id
       WHERE p.is_public = true
     `;
     const params = [];
@@ -305,6 +307,11 @@ app.get('/api/portfolios/:id', optionalAuth, async (req, res) => {
       [req.params.id]
     ).catch(() => ({ rows: [] }));
 
+    const tags = await pool.query(
+      'SELECT tag FROM portfolio_tags WHERE portfolio_id = $1',
+      [req.params.id]
+    ).catch(() => ({ rows: [] }));
+
     const comments = await pool.query(`
       SELECT c.*, u.nickname, u.username
       FROM portfolio_comments c
@@ -318,6 +325,7 @@ app.get('/api/portfolios/:id', optionalAuth, async (req, res) => {
       portfolio: {
         ...result.rows[0],
         media: media.rows,
+        tags: tags.rows.map(r => r.tag),
         comments: comments.rows,
       }
     });
@@ -330,9 +338,11 @@ app.get('/api/portfolios/:id', optionalAuth, async (req, res) => {
 app.get('/api/my/portfolios', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT p.*, COUNT(DISTINCT l.id) AS like_count, COALESCE(p.view_count,0) AS view_count
+      `SELECT p.*, COUNT(DISTINCT l.id) AS like_count, COALESCE(p.view_count,0) AS view_count,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT t.tag), NULL) AS tags
        FROM portfolios p
        LEFT JOIN portfolio_likes l ON l.portfolio_id = p.id
+       LEFT JOIN portfolio_tags t ON t.portfolio_id = p.id
        WHERE p.user_id = $1
        GROUP BY p.id
        ORDER BY p.created_at DESC`,
@@ -353,7 +363,7 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
     title, category, service_intro,
     main_features, tech_environment,
     team_members, dev_period, github_link, is_public,
-    run_link, file_link, store_link, design_tool,
+    run_link, file_link, store_link, design_tool, tags,
   } = req.body;
 
   if (!title || !category)
@@ -395,6 +405,18 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
       );
     }
 
+    // 태그 저장
+    if (tags) {
+      const tagList = (typeof tags === 'string' ? tags.split(',') : tags)
+        .map(t => t.trim()).filter(Boolean);
+      for (const tag of tagList) {
+        await pool.query(
+          'INSERT INTO portfolio_tags (portfolio_id, tag) VALUES ($1, $2)',
+          [portfolioId, tag]
+        );
+      }
+    }
+
     res.status(201).json({ success: true, message: '포트폴리오가 등록되었습니다!', portfolio: result.rows[0] });
   } catch (err) {
     console.error(err);
@@ -411,7 +433,7 @@ app.put('/api/portfolios/:id', authMiddleware, upload.fields([
     title, category, service_intro,
     main_features, tech_environment,
     team_members, dev_period, github_link, is_public,
-    run_link, file_link, store_link, design_tool,
+    run_link, file_link, store_link, design_tool, tags,
   } = req.body;
 
   try {
@@ -446,6 +468,19 @@ app.put('/api/portfolios/:id', authMiddleware, upload.fields([
     params.push(req.params.id);
 
     const result = await pool.query(query, params);
+
+    // 태그 업데이트
+    await pool.query('DELETE FROM portfolio_tags WHERE portfolio_id = $1', [req.params.id]);
+    if (tags) {
+      const tagList = (typeof tags === 'string' ? tags.split(',') : tags)
+        .map(t => t.trim()).filter(Boolean);
+      for (const tag of tagList) {
+        await pool.query(
+          'INSERT INTO portfolio_tags (portfolio_id, tag) VALUES ($1, $2)',
+          [req.params.id, tag]
+        );
+      }
+    }
 
     res.json({ success: true, message: '포트폴리오가 수정되었습니다!', portfolio: result.rows[0] });
   } catch (err) {
