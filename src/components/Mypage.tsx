@@ -233,10 +233,3 @@ const DeleteBtn = styled.button`
   background: rgba(255,107,107,0.2); color: #ff6b6b; font-size: 13px; font-weight: 600; cursor: pointer;
   &:hover { background: rgba(255,107,107,0.4); }
 `;
-
-
-
-
-
-
-
