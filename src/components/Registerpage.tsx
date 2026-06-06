@@ -5,10 +5,17 @@ import { portfolioAPI } from '../Api';
 interface RegisterPageProps {
   onBack: () => void;
   onSuccess: () => void;
-  editData?: any | null; // 수정 시 기존 데이터
+  editData?: any | null;
 }
 
 type Category = '웹' | '앱' | '게임' | '디자인';
+
+const SUB_CATEGORY_OPTIONS: Record<Category, string[]> = {
+  '웹':     ['앱', '게임', '디자인'],
+  '앱':     ['웹', '게임', '디자인'],
+  '게임':   ['웹', '앱', '디자인'],
+  '디자인': ['웹', '앱', '게임'],
+};
 
 const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData }) => {
   const isEdit = !!editData;
@@ -18,6 +25,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
   const [designImages, setDesignImages] = useState<File[]>([]);
   const [designImagePreviews, setDesignImagePreviews] = useState<string[]>([]);
+  const [subCategories, setSubCategories] = useState<string[]>([]);
 
   const [form, setForm] = useState({
     title: '',
@@ -35,7 +43,6 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
     design_tool: '',
   });
 
-  // 수정 모드면 기존 데이터로 폼 초기화
   useEffect(() => {
     if (editData) {
       setForm({
@@ -53,7 +60,12 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
         store_link: editData.store_link || '',
         design_tool: editData.design_tool || '',
       });
-      // 기존 메인 이미지 미리보기
+      if (editData.sub_categories) {
+        const parsed = typeof editData.sub_categories === 'string'
+          ? editData.sub_categories.split(',').filter(Boolean)
+          : editData.sub_categories;
+        setSubCategories(parsed);
+      }
       if (editData.main_image) {
         const url = editData.main_image.startsWith('http')
           ? editData.main_image
@@ -62,6 +74,18 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
       }
     }
   }, [editData]);
+
+  // 메인 카테고리 바뀌면 추가 카테고리 초기화
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setForm({ ...form, category: e.target.value as Category });
+    setSubCategories([]);
+  };
+
+  const toggleSubCategory = (cat: string) => {
+    setSubCategories(prev =>
+      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    );
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -86,6 +110,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
 
     const formData = new FormData();
     Object.entries(form).forEach(([key, value]) => formData.append(key, value));
+    if (subCategories.length > 0) formData.append('sub_categories', subCategories.join(','));
     if (mainImageFile) formData.append('main_image', mainImageFile);
     designImages.forEach(file => formData.append('media_files', file));
 
@@ -118,7 +143,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
           <Row>
             <Col>
               <Label>카테고리 <Required>*</Required></Label>
-              <Select name="category" value={form.category} onChange={handleChange}>
+              <Select name="category" value={form.category} onChange={handleCategoryChange}>
                 <option value="웹">웹</option>
                 <option value="앱">앱</option>
                 <option value="게임">게임</option>
@@ -133,6 +158,21 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
               </Select>
             </Col>
           </Row>
+
+          {/* 추가 카테고리 */}
+          <Label>추가 카테고리 <Hint>(해당되는 항목 선택, 복수 선택 가능)</Hint></Label>
+          <SubCategoryRow>
+            {SUB_CATEGORY_OPTIONS[form.category].map(cat => (
+              <SubCategoryChip
+                key={cat}
+                type="button"
+                $active={subCategories.includes(cat)}
+                onClick={() => toggleSubCategory(cat)}
+              >
+                {cat}
+              </SubCategoryChip>
+            ))}
+          </SubCategoryRow>
 
           <Label>메인 이미지</Label>
           <ImageUploadBox onClick={() => document.getElementById('mainImageInput')?.click()}>
@@ -198,31 +238,31 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
             <>
               <Label>사용 툴</Label>
               <Input name="design_tool" placeholder="Figma, Photoshop, Illustrator..." value={form.design_tool} onChange={handleChange} />
-              <Label>추가 이미지 <Hint>(최대 10장, 작업물 상세 이미지)</Hint></Label>
+              <Label>추가 이미지 <Hint>(작업물 상세 이미지)</Hint></Label>
               <MultiImageUploadBox onClick={() => document.getElementById('designImagesInput')?.click()}>
                 {designImagePreviews.length > 0 ? (
                   <PreviewGrid>
                     {designImagePreviews.map((src, i) => (
                       <PreviewThumb key={i}>
                         <img src={src} alt={`design-${i}`} />
-                        <RemoveBtn onClick={e => {
+                        <RemoveBtn type="button" onClick={e => {
                           e.stopPropagation();
                           setDesignImages(prev => prev.filter((_, idx) => idx !== i));
                           setDesignImagePreviews(prev => prev.filter((_, idx) => idx !== i));
                         }}>×</RemoveBtn>
                       </PreviewThumb>
                     ))}
-                    {designImagePreviews.length < 10 && <AddMoreBtn>+ 추가</AddMoreBtn>}
+                    <AddMoreBtn>+ 추가</AddMoreBtn>
                   </PreviewGrid>
                 ) : (
-                  <UploadPlaceholder>🖼️ 클릭하여 추가 이미지 업로드 (최대 10장)</UploadPlaceholder>
+                  <UploadPlaceholder>🖼️ 클릭하여 추가 이미지 업로드</UploadPlaceholder>
                 )}
               </MultiImageUploadBox>
               <input id="designImagesInput" type="file" accept="image/*" multiple style={{ display: 'none' }}
                 onChange={e => {
-                  const files = Array.from(e.target.files || []).slice(0, 10 - designImages.length);
-                  setDesignImages(prev => [...prev, ...files].slice(0, 10));
-                  setDesignImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))].slice(0, 10));
+                  const files = Array.from(e.target.files || []);
+                  setDesignImages(prev => [...prev, ...files]);
+                  setDesignImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
                   e.target.value = '';
                 }}
               />
@@ -247,7 +287,6 @@ const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 `;
-
 const Container = styled.div`
   max-width: 800px; margin: 0 auto; padding: 40px 40px 100px;
   animation: ${fadeIn} 0.4s ease;
@@ -272,6 +311,14 @@ const Col = styled.div` flex: 1; display: flex; flex-direction: column; gap: 8px
 const Label = styled.label` font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.8); margin-top: 8px; `;
 const Hint = styled.span` color: rgba(255,255,255,0.4); font-weight: 400; font-size: 12px; `;
 const Required = styled.span` color: #ff85a1; `;
+const SubCategoryRow = styled.div` display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; `;
+const SubCategoryChip = styled.button<{ $active: boolean }>`
+  padding: 8px 20px; border-radius: 50px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+  border: 1px solid ${p => p.$active ? '#7b2cbf' : 'rgba(255,255,255,0.2)'};
+  background: ${p => p.$active ? 'rgba(123,44,191,0.3)' : 'transparent'};
+  color: ${p => p.$active ? '#d8b4fe' : 'rgba(255,255,255,0.5)'};
+  &:hover { border-color: #7b2cbf; color: #d8b4fe; }
+`;
 const Input = styled.input`
   padding: 11px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15);
   background: rgba(255,255,255,0.08); color: white; font-size: 14px; outline: none;

@@ -19,6 +19,7 @@ export const authAPI = {
   login: (data: { username: string; password: string }) =>
     fetchAPI('/api/login', { method: 'POST', body: JSON.stringify(data) }),
   me: () => fetchAPI('/api/me'),
+  withdraw: () => fetchAPI('/api/me', { method: 'DELETE' }),
 };
 
 // ── 포트폴리오 API ──

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { portfolioAPI } from '../Api';
+import { portfolioAPI, authAPI } from '../Api';
 
 const getImageUrl = (url: string | undefined): string => {
   if (!url) return '/artifact-logo.png';
@@ -32,9 +32,10 @@ interface MyPageProps {
   onBack: () => void;
   onRegister: () => void;
   onEdit: (portfolio: Portfolio) => void;
+  onLogout: () => void;
 }
 
-const MyPage: React.FC<MyPageProps> = ({ user, onBack, onRegister, onEdit }) => {
+const MyPage: React.FC<MyPageProps> = ({ user, onBack, onRegister, onEdit, onLogout }) => {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,6 +48,17 @@ const MyPage: React.FC<MyPageProps> = ({ user, onBack, onRegister, onEdit }) => 
   };
 
   useEffect(() => { fetchPortfolios(); }, []);
+
+  const handleWithdraw = async () => {
+    if (!window.confirm(`정말로 탈퇴하시겠습니까?\n탈퇴하면 모든 포트폴리오가 삭제됩니다.`)) return;
+    const res = await authAPI.withdraw();
+    if (res.success) {
+      alert('탈퇴가 완료되었습니다.');
+      onLogout();
+    } else {
+      alert(res.message || '탈퇴 처리 중 오류가 발생했습니다.');
+    }
+  };
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return;
@@ -71,6 +83,7 @@ const MyPage: React.FC<MyPageProps> = ({ user, onBack, onRegister, onEdit }) => 
           <Email>{user.email}</Email>
         </ProfileInfo>
         <RegisterBtn onClick={onRegister}>+ 포트폴리오 등록</RegisterBtn>
+        <WithdrawBtn onClick={handleWithdraw}>회원 탈퇴</WithdrawBtn>
       </ProfileSection>
 
       <SectionTitle>내 포트폴리오 ({portfolios.length})</SectionTitle>
@@ -158,6 +171,12 @@ const Nickname = styled.h2` font-size: 24px; font-weight: 800; margin: 0 0 4px; 
 const Username = styled.p` font-size: 15px; color: rgba(255,255,255,0.5); margin: 0 0 4px; `;
 const Email = styled.p` font-size: 14px; color: rgba(255,255,255,0.4); margin: 0; `;
 
+const WithdrawBtn = styled.button`
+  padding: 10px 18px; border-radius: 50px; font-size: 13px; font-weight: 600; cursor: pointer;
+  background: transparent; border: 1px solid rgba(255, 100, 100, 0.4); color: rgba(255,100,100,0.7);
+  transition: all 0.2s;
+  &:hover { background: rgba(255,100,100,0.1); border-color: #ff6b6b; color: #ff6b6b; }
+`;
 const RegisterBtn = styled.button`
   padding: 12px 24px;
   border-radius: 50px;

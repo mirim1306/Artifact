@@ -175,7 +175,8 @@ const App = () => {
 
     if (navTab === 'mypage' && user)
       return <MyPage user={user} onBack={() => setNavTab('home')} onRegister={() => setNavTab('register')}
-        onEdit={(p: Project) => { setEditPortfolio(p); setNavTab('register'); }} />;
+        onEdit={(p: Project) => { setEditPortfolio(p); setNavTab('register'); }}
+        onLogout={handleLogout} />;
 
     return (
       <>
