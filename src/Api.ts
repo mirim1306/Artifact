@@ -1,4 +1,4 @@
-const API_URL = 'https://artifact-production-3df5.up.railway.app';
+const API_URL = 'https://artifact.mirim-it-show.site';
 
 const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
   const token = localStorage.getItem('token');
