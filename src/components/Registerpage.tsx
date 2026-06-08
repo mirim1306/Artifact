@@ -41,6 +41,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
     file_link: '',
     store_link: '',
     design_tool: '',
+    design_link: '',
   });
 
   // 수정 모드면 기존 데이터로 폼 초기화
@@ -60,6 +61,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
         file_link: editData.file_link || '',
         store_link: editData.store_link || '',
         design_tool: editData.design_tool || '',
+        design_link: editData.design_link || '',
       });
       // 기존 메인 이미지 미리보기
       if (editData.sub_categories) {
@@ -185,8 +187,13 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
           <Label>주요 기능</Label>
           <Textarea name="main_features" placeholder="주요 기능을 입력해주세요" value={form.main_features} rows={4} onChange={handleChange} />
 
-          <Label>개발 기술 / 환경</Label>
-          <Input name="tech_environment" placeholder="React, Node.js, PostgreSQL..." value={form.tech_environment} onChange={handleChange} />
+          <Label>{form.category === '디자인' ? '사용 툴 / 환경' : '개발 기술 / 환경'}</Label>
+          <Input
+            name="tech_environment"
+            placeholder={form.category === '디자인' ? 'Figma, Photoshop, Illustrator...' : 'React, Node.js, PostgreSQL...'}
+            value={form.tech_environment}
+            onChange={handleChange}
+          />
 
           <Label>팀원</Label>
           <Input name="team_members" placeholder="홍길동, 김철수" value={form.team_members} onChange={handleChange} />
@@ -229,41 +236,45 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
 
           {form.category === '디자인' && (
             <>
-              <Label>사용 툴</Label>
-              <Input name="design_tool" placeholder="Figma, Photoshop, Illustrator..." value={form.design_tool} onChange={handleChange} />
-              <Label>추가 이미지 <Hint>(최대 10장, 작업물 상세 이미지)</Hint></Label>
+              <Label>추가 이미지 <Hint>(작업물 상세 이미지, 무제한)</Hint></Label>
               <MultiImageUploadBox onClick={() => document.getElementById('designImagesInput')?.click()}>
                 {designImagePreviews.length > 0 ? (
                   <PreviewGrid>
                     {designImagePreviews.map((src, i) => (
                       <PreviewThumb key={i}>
                         <img src={src} alt={`design-${i}`} />
-                        <RemoveBtn onClick={e => {
+                        <RemoveBtn type="button" onClick={e => {
                           e.stopPropagation();
                           setDesignImages(prev => prev.filter((_, idx) => idx !== i));
                           setDesignImagePreviews(prev => prev.filter((_, idx) => idx !== i));
                         }}>×</RemoveBtn>
                       </PreviewThumb>
                     ))}
-                    {designImagePreviews.length < 10 && <AddMoreBtn>+ 추가</AddMoreBtn>}
+                    <AddMoreBtn>+ 추가</AddMoreBtn>
                   </PreviewGrid>
                 ) : (
-                  <UploadPlaceholder>🖼️ 클릭하여 추가 이미지 업로드 (최대 10장)</UploadPlaceholder>
+                  <UploadPlaceholder>🖼️ 클릭하여 추가 이미지 업로드</UploadPlaceholder>
                 )}
               </MultiImageUploadBox>
               <input id="designImagesInput" type="file" accept="image/*" multiple style={{ display: 'none' }}
                 onChange={e => {
-                  const files = Array.from(e.target.files || []).slice(0, 10 - designImages.length);
-                  setDesignImages(prev => [...prev, ...files].slice(0, 10));
-                  setDesignImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))].slice(0, 10));
+                  const files = Array.from(e.target.files || []);
+                  setDesignImages(prev => [...prev, ...files]);
+                  setDesignImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
                   e.target.value = '';
                 }}
               />
+              <Label>디자인 링크 <Hint>(Figma, Behance, Notion 등)</Hint></Label>
+              <Input name="design_link" placeholder="https://www.figma.com/... 또는 https://www.behance.net/..." value={(form as any).design_link || ''} onChange={handleChange} />
             </>
           )}
 
-          <Label>GitHub 링크</Label>
-          <Input name="github_link" placeholder="https://github.com/..." value={form.github_link} onChange={handleChange} />
+          {form.category !== '디자인' && (
+            <>
+              <Label>GitHub 링크</Label>
+              <Input name="github_link" placeholder="https://github.com/..." value={form.github_link} onChange={handleChange} />
+            </>
+          )}
         </Section>
 
         <SubmitButton type="submit" disabled={loading}>

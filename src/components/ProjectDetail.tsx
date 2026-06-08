@@ -63,6 +63,7 @@ const getCurrentUserId = (): number | null => {
 
 const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
   const [isRunLoading, setIsRunLoading] = useState(false);
+  const [activeMedia, setActiveMedia] = useState<{ url: string; isVideo: boolean } | null>(null);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(project.like_count || 0);
   const [comments, setComments] = useState<Comment[]>(project.comments || []);
@@ -190,13 +191,32 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
         {/* ── 우측 이미지 ── */}
         <ImageSide>
           <MainImageWrapper>
-            <ProjectImage src={mainImageUrl} alt="Project Main" />
+            {activeMedia ? (
+              activeMedia.isVideo
+                ? <MainVideo src={activeMedia.url} controls autoPlay muted playsInline />
+                : <ProjectImage src={activeMedia.url} alt="Active Media" />
+            ) : (
+              <ProjectImage src={mainImageUrl} alt="Project Main" />
+            )}
           </MainImageWrapper>
           {mediaList.length > 0 && (
             <MediaGrid>
+              {/* 메인 이미지도 썸네일로 */}
+              <MediaItemBox
+                $active={activeMedia === null}
+                onClick={() => setActiveMedia(null)}
+              >
+                <img src={mainImageUrl} alt="main" />
+              </MediaItemBox>
               {mediaList.map((m, i) => (
-                <MediaItemBox key={i}>
-                  {m.isVideo ? <video src={m.url} controls muted playsInline /> : <img src={m.url} alt={`media-${i}`} />}
+                <MediaItemBox
+                  key={i}
+                  $active={activeMedia?.url === m.url}
+                  onClick={() => setActiveMedia(m)}
+                >
+                  {m.isVideo
+                    ? <video src={m.url} muted playsInline />
+                    : <img src={m.url} alt={`media-${i}`} />}
                 </MediaItemBox>
               ))}
             </MediaGrid>
@@ -329,11 +349,14 @@ const MainImageWrapper = styled.div`
   width: 100%; aspect-ratio: 16/10; background: rgba(255,255,255,0.05); border-radius: 30px; overflow: hidden;
 `;
 const ProjectImage = styled.img` width: 100%; height: 100%; object-fit: cover; `;
+const MainVideo = styled.video` width: 100%; height: 100%; object-fit: cover; `;
 const MediaGrid = styled.div` display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; `;
-const MediaItemBox = styled.div`
+const MediaItemBox = styled.div<{ $active?: boolean }>`
   aspect-ratio: 16/10; background: rgba(255,255,255,0.05); border-radius: 14px; overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 2px solid ${p => p.$active ? '#7c6fcd' : 'rgba(255,255,255,0.1)'};
+  cursor: pointer; transition: border-color 0.2s, transform 0.2s;
   img, video { width: 100%; height: 100%; object-fit: cover; }
+  &:hover { border-color: #9187d8; transform: scale(1.03); }
 `;
 const BottomSection = styled.div`
   margin-top: 50px; padding-bottom: 40px; display: flex; flex-direction: column; gap: 48px;

@@ -250,7 +250,6 @@ const App = () => {
                   <img src={getImageUrl(item.main_image)} alt={item.title} />
                   <div className="card-info">
                     <span className="cat">{item.category}</span>
-                    <span className="id">{String(item.id).padStart(2, '0')}</span>
                   </div>
                   <div className="hover-tip">더블 클릭 하세요!</div>
                 </div>
@@ -436,9 +435,8 @@ const GridItem = styled.div`
     width: 100%; aspect-ratio: 16 / 10; overflow: hidden; position: relative;
     border-radius: 16px; background: #1c2440; border: 1px solid rgba(255,255,255,0.05);
     img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s ease; }
-    .card-info { position: absolute; top: 15px; left: 20px; right: 20px; display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; z-index: 2; }
+    .card-info { position: absolute; top: 15px; left: 20px; font-size: 11px; font-weight: bold; z-index: 2; }
     .cat { background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 5px; }
-    .id { background: rgba(124,111,205,0.7); padding: 4px 10px; border-radius: 5px; }
     .hover-tip { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); opacity: 0; transition: 0.3s; z-index: 1; }
   }
   &:hover img { transform: scale(1.04); }
