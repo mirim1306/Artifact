@@ -162,7 +162,7 @@ const App = () => {
     if (navTab === 'register') {
       return (
         <RegisterPage
-          onBack={() => { setNavTab('home'); setEditPortfolio(null); }}
+
           onSuccess={() => {
             setNavTab('home');
             setSliderIndex(0);
@@ -175,7 +175,7 @@ const App = () => {
     }
 
     if (navTab === 'mypage' && user)
-      return <MyPage user={user} onBack={() => setNavTab('home')} onRegister={() => setNavTab('register')}
+      return <MyPage user={user} onRegister={() => setNavTab('register')}
         onEdit={(p: Project) => { setEditPortfolio(p); setNavTab('register'); }}
         onLogout={handleLogout} />;
 

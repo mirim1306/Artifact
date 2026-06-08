@@ -3,7 +3,6 @@ import styled, { keyframes } from 'styled-components';
 import { portfolioAPI } from '../Api';
 
 interface RegisterPageProps {
-  onBack: () => void;
   onSuccess: () => void;
   editData?: any | null; // 수정 시 기존 데이터
 }
@@ -18,7 +17,7 @@ const SUB_CATEGORY_OPTIONS: Record<Category, string[]> = {
   '기타':   ['웹', '앱', '게임', '디자인'],
 };
 
-const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData }) => {
+const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
   const isEdit = !!editData;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

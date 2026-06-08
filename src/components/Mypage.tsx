@@ -29,13 +29,12 @@ interface Portfolio {
 
 interface MyPageProps {
   user: { id: number; username: string; nickname: string; email: string };
-  onBack: () => void;
   onRegister: () => void;
   onEdit: (portfolio: Portfolio) => void;
   onLogout: () => void;
 }
 
-const MyPage: React.FC<MyPageProps> = ({ user, onBack, onRegister, onEdit, onLogout }) => {
+const MyPage: React.FC<MyPageProps> = ({ user, onRegister, onEdit, onLogout }) => {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
 
