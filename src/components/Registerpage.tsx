@@ -8,13 +8,14 @@ interface RegisterPageProps {
   editData?: any | null; // 수정 시 기존 데이터
 }
 
-type Category = '웹' | '앱' | '게임' | '디자인';
+type Category = '웹' | '앱' | '게임' | '디자인' | '기타';
 
 const SUB_CATEGORY_OPTIONS: Record<Category, string[]> = {
-  '웹':     ['앱', '게임', '디자인'],
-  '앱':     ['웹', '게임', '디자인'],
-  '게임':   ['웹', '앱', '디자인'],
-  '디자인': ['웹', '앱', '게임'],
+  '웹':     ['앱', '게임', '디자인', '기타'],
+  '앱':     ['웹', '게임', '디자인', '기타'],
+  '게임':   ['웹', '앱', '디자인', '기타'],
+  '디자인': ['웹', '앱', '게임', '기타'],
+  '기타':   ['웹', '앱', '게임', '디자인'],
 };
 
 const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData }) => {
@@ -26,6 +27,9 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
   const [designImages, setDesignImages] = useState<File[]>([]);
   const [designImagePreviews, setDesignImagePreviews] = useState<string[]>([]);
   const [subCategories, setSubCategories] = useState<string[]>([]);
+  const [customCategory, setCustomCategory] = useState('');
+  const [customSubCategory, setCustomSubCategory] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
 
   const [form, setForm] = useState({
     title: '',
@@ -102,7 +106,11 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
 
     const formData = new FormData();
     Object.entries(form).forEach(([key, value]) => formData.append(key, value));
-    if (subCategories.length > 0) formData.append('sub_categories', subCategories.join(','));
+    const finalCategory = form.category === '기타' && customCategory.trim()
+      ? customCategory.trim() : form.category;
+    formData.set('category', finalCategory);
+    const finalSubs = subCategories.map(s => s === '기타' && customSubCategory.trim() ? customSubCategory.trim() : s);
+    if (finalSubs.length > 0) formData.append('sub_categories', finalSubs.join(','));
     if (mainImageFile) formData.append('main_image', mainImageFile);
     designImages.forEach(file => formData.append('media_files', file));
 
@@ -137,12 +145,21 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
               <Select name="category" value={form.category} onChange={e => {
                 setForm({ ...form, category: e.target.value as Category });
                 setSubCategories([]);
+                setCustomCategory('');
               }}>
                 <option value="웹">웹</option>
                 <option value="앱">앱</option>
                 <option value="게임">게임</option>
                 <option value="디자인">디자인</option>
+                <option value="기타">기타</option>
               </Select>
+              {form.category === '기타' && (
+                <Input
+                  placeholder="카테고리 직접 입력..."
+                  value={customCategory}
+                  onChange={e => setCustomCategory(e.target.value)}
+                />
+              )}
             </Col>
             <Col>
               <Label>공개 여부</Label>
@@ -159,21 +176,46 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
               <SubCategoryChip
                 key={cat}
                 type="button"
-                $active={subCategories.includes(cat)}
-                onClick={() => setSubCategories(prev =>
-                  prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
-                )}
+                $active={subCategories.includes(cat) || (cat === '기타' && !!customSubCategory)}
+                onClick={() => {
+                  if (cat === '기타') {
+                    setSubCategories(prev => prev.includes('기타') ? prev.filter(c => c !== '기타') : [...prev, '기타']);
+                  } else {
+                    setSubCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+                  }
+                }}
               >
                 {cat}
               </SubCategoryChip>
             ))}
           </SubCategoryRow>
+          {subCategories.includes('기타') && (
+            <Input
+              placeholder="추가 카테고리 직접 입력..."
+              value={customSubCategory}
+              onChange={e => setCustomSubCategory(e.target.value)}
+            />
+          )}
 
           <Label>메인 이미지</Label>
-          <ImageUploadBox onClick={() => document.getElementById('mainImageInput')?.click()}>
+          <ImageUploadBox
+            onClick={() => document.getElementById('mainImageInput')?.click()}
+            $isDragging={isDragging}
+            onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={e => {
+              e.preventDefault();
+              setIsDragging(false);
+              const file = e.dataTransfer.files?.[0];
+              if (file && file.type.startsWith('image/')) {
+                setMainImageFile(file);
+                setMainImagePreview(URL.createObjectURL(file));
+              }
+            }}
+          >
             {mainImagePreview
               ? <PreviewImg src={mainImagePreview} alt="preview" />
-              : <UploadPlaceholder>🖼️ 클릭하여 메인 이미지 업로드</UploadPlaceholder>
+              : <UploadPlaceholder>{isDragging ? '여기에 놓으세요!' : '🖼️ 클릭하거나 이미지를 끌어다 놓으세요'}</UploadPlaceholder>
             }
           </ImageUploadBox>
           <input id="mainImageInput" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleMainImage} />
@@ -237,7 +279,16 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onBack, onSuccess, editData
           {form.category === '디자인' && (
             <>
               <Label>추가 이미지 <Hint>(작업물 상세 이미지, 무제한)</Hint></Label>
-              <MultiImageUploadBox onClick={() => document.getElementById('designImagesInput')?.click()}>
+              <MultiImageUploadBox
+                onClick={() => document.getElementById('designImagesInput')?.click()}
+                onDragOver={e => e.preventDefault()}
+                onDrop={e => {
+                  e.preventDefault();
+                  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                  setDesignImages(prev => [...prev, ...files]);
+                  setDesignImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
+                }}
+              >
                 {designImagePreviews.length > 0 ? (
                   <PreviewGrid>
                     {designImagePreviews.map((src, i) => (
@@ -334,8 +385,10 @@ const Select = styled.select`
   background: rgba(30,30,60,0.9); color: white; font-size: 14px; outline: none; cursor: pointer;
   &:focus { border-color: #7b2cbf; }
 `;
-const ImageUploadBox = styled.div`
-  width: 100%; aspect-ratio: 16/9; border-radius: 14px; border: 2px dashed rgba(255,255,255,0.2);
+const ImageUploadBox = styled.div<{ $isDragging?: boolean }>`
+  width: 100%; aspect-ratio: 16/9; border-radius: 14px;
+  border: 2px dashed ${p => p.$isDragging ? '#7b2cbf' : 'rgba(255,255,255,0.2)'};
+  background: ${p => p.$isDragging ? 'rgba(123,44,191,0.1)' : 'transparent'};
   cursor: pointer; overflow: hidden; display: flex; align-items: center; justify-content: center; transition: 0.3s;
   &:hover { border-color: #7b2cbf; }
 `;

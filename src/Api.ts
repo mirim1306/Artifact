@@ -24,8 +24,8 @@ export const authAPI = {
 
 // ── 포트폴리오 API ──
 export const portfolioAPI = {
-  getAll: (category?: string, sort?: string) =>
-    fetchAPI(`/api/portfolios?${new URLSearchParams({ ...(category ? { category } : {}), ...(sort ? { sort } : {}) })}`),
+  getAll: (category?: string, sort?: string, search?: string) =>
+    fetchAPI(`/api/portfolios?${new URLSearchParams({ ...(category ? { category } : {}), ...(sort ? { sort } : {}), ...(search ? { search } : {}) })}`),
   search: (q: string) =>
     fetchAPI(`/api/portfolios?${new URLSearchParams({ search: q })}`),
   getOne: (id: number) => fetchAPI(`/api/portfolios/${id}`),

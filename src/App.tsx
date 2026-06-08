@@ -76,10 +76,10 @@ const App = () => {
     if (token && savedUser) setUser(JSON.parse(savedUser));
   }, []);
 
-  const fetchPortfolios = useCallback(async (currentTab: Category, currentSort = 'latest') => {
+  const fetchPortfolios = useCallback(async (currentTab: Category, currentSort = 'latest', query = '') => {
     setLoading(true);
     try {
-      const res = await portfolioAPI.getAll(currentTab === '전체' ? undefined : currentTab, currentSort !== 'latest' ? currentSort : undefined);
+      const res = await portfolioAPI.getAll(currentTab === '전체' ? undefined : currentTab, currentSort !== 'latest' ? currentSort : undefined, query || undefined);
       if (res && res.success && Array.isArray(res.portfolios)) {
         setPortfolios(res.portfolios);
         const itemsForSlider = res.portfolios.slice(0, 5).map((p: Project) => ({
@@ -216,9 +216,9 @@ const App = () => {
             placeholder="제목, 기술 스택, 팀원 이름으로 검색..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') fetchPortfolios(tab, sort); }}
+            onKeyDown={e => { if (e.key === 'Enter') fetchPortfolios(tab, sort, searchQuery); }}
           />
-          <SearchBtn onClick={() => fetchPortfolios(tab, sort)}>검색</SearchBtn>
+          <SearchBtn onClick={() => fetchPortfolios(tab, sort, searchQuery)}>검색</SearchBtn>
         </SearchRow>
 
         <ControlRow>
@@ -229,7 +229,7 @@ const App = () => {
           </Nav>
           <SortRow>
             {([['latest','최신순'], ['likes','좋아요순'], ['views','조회순']] as const).map(([key, label]) => (
-              <SortBtn key={key} $active={sort === key} onClick={() => setSort(key)}>{label}</SortBtn>
+              <SortBtn key={key} $active={sort === key} onClick={() => { setSort(key); fetchPortfolios(tab, key, searchQuery); }}>{label}</SortBtn>
             ))}
           </SortRow>
         </ControlRow>
@@ -245,7 +245,7 @@ const App = () => {
                 const res = await portfolioAPI.getOne(item.id);
                 if (res.success) setSelectedProject(res.portfolio);
                 else setSelectedProject(item);
-              }}>"   
+              }}>
                 <div className="image-box">
                   <img src={getImageUrl(item.main_image)} alt={item.title} />
                   <div className="card-info">
@@ -448,7 +448,7 @@ const GridItem = styled.div`
 const LoadingText = styled.div` grid-column: 1/-1; text-align: center; padding: 100px; color: rgba(255,255,255,0.4); font-size: 16px; `;
 const EmptyText = styled.div` grid-column: 1/-1; text-align: center; padding: 100px; color: rgba(255,255,255,0.3); font-size: 16px; `;
 
-const SearchRow = styled.div` display: flex; gap: 12px; padding: 0 60px; margin-bottom: 0; `;
+const SearchRow = styled.div` display: flex; gap: 12px; padding: 0 60px; margin-top: 20px; margin-bottom: 0; `;
 const SearchInput = styled.input`
   flex: 1; padding: 14px 20px; border-radius: 50px; font-size: 15px;
   background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); color: white; outline: none;
