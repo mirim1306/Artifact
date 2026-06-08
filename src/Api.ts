@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:4000';
+const API_URL = 'https://artifact-production-3df5.up.railway.app';
 
 const fetchAPI = async (endpoint: string, options: RequestInit = {}) => {
   const token = localStorage.getItem('token');
