@@ -63,7 +63,6 @@ const App = () => {
   const location = useLocation();
   const navTab: NavTab = location.pathname === '/register' ? 'register' : location.pathname === '/mypage' ? 'mypage' : 'home';
   const isAuthPage = location.pathname === '/login';
-  const projectId = location.pathname.startsWith('/portfolio/') ? location.pathname.split('/')[2] : null;
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [user, setUser] = useState<User | null>(null);
 
@@ -106,6 +105,13 @@ const App = () => {
   useEffect(() => {
     if (navTab === 'home') fetchPortfolios(tab, sort);
   }, [navTab, tab, sort, refreshTrigger, fetchPortfolios]);
+
+  // URL이 /portfolio/가 아니면 selectedProject 초기화
+  useEffect(() => {
+    if (!location.pathname.startsWith('/portfolio/')) {
+      setSelectedProject(null);
+    }
+  }, [location.pathname]);
 
   // 자동 슬라이더 (5초)
   useEffect(() => {
@@ -162,7 +168,7 @@ const App = () => {
   );
 
   const renderContent = () => {
-    if (selectedProject) return <ProjectDetail project={selectedProject} onBack={() => { setSelectedProject(null); navigate('/'); }} />;
+    if (selectedProject && location.pathname.startsWith('/portfolio/')) return <ProjectDetail project={selectedProject} onBack={() => { setSelectedProject(null); navigate('/'); }} />;
 
     if (navTab === 'register') {
       return (
