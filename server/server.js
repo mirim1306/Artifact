@@ -113,6 +113,19 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
+const adminMiddleware = async (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ success: false, message: '로그인이 필요합니다.' });
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    const result = await pool.query('SELECT is_admin FROM users WHERE id = $1', [req.user.id]);
+    if (!result.rows[0]?.is_admin) return res.status(403).json({ success: false, message: '관리자 권한이 필요합니다.' });
+    next();
+  } catch {
+    res.status(401).json({ success: false, message: '유효하지 않은 토큰입니다.' });
+  }
+};
+
 // 로그인 선택적 미들웨어 (비로그인도 통과, 로그인이면 user 세팅)
 const optionalAuth = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -224,7 +237,7 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/me', authMiddleware, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, username, nickname, email, created_at FROM users WHERE id = $1',
+      'SELECT id, username, nickname, email, created_at, is_admin FROM users WHERE id = $1',
       [req.user.id]
     );
     res.json({ success: true, user: result.rows[0] });
@@ -589,6 +602,105 @@ app.delete('/api/comments/:id', authMiddleware, async (req, res) => {
   }
 });
 
+
+// ══════════════════════════════════════════════════════════════
+// 관리자 API
+// ══════════════════════════════════════════════════════════════
+
+// 전체 유저 목록
+app.get('/api/admin/users', adminMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, username, nickname, email, created_at, is_admin FROM users ORDER BY created_at DESC'
+    );
+    res.json({ success: true, users: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: '유저 목록 조회 오류' });
+  }
+});
+
+// 유저 강제 탈퇴
+app.delete('/api/admin/users/:id', adminMiddleware, async (req, res) => {
+  try {
+    if (parseInt(req.params.id) === req.user.id)
+      return res.status(400).json({ success: false, message: '본인 계정은 삭제할 수 없습니다.' });
+
+    // Cloudinary 미디어 삭제
+    if (useCloudinary) {
+      const portfolios = await pool.query('SELECT id, main_image FROM portfolios WHERE user_id = $1', [req.params.id]);
+      for (const p of portfolios.rows) {
+        const mediaRows = await pool.query('SELECT media_url FROM portfolio_media WHERE portfolio_id = $1', [p.id]).catch(() => ({ rows: [] }));
+        const allUrls = [p.main_image, ...mediaRows.rows.map(r => r.media_url)].filter(Boolean);
+        await Promise.all(allUrls.map(url => deleteFromCloudinary(url)));
+      }
+    }
+
+    await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
+    res.json({ success: true, message: '유저가 삭제되었습니다.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: '유저 삭제 오류' });
+  }
+});
+
+// 전체 포트폴리오 목록 (관리자용)
+app.get('/api/admin/portfolios', adminMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.*, u.nickname, u.username FROM portfolios p
+       JOIN users u ON p.user_id = u.id
+       ORDER BY p.created_at DESC`
+    );
+    res.json({ success: true, portfolios: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: '포트폴리오 목록 조회 오류' });
+  }
+});
+
+// 관리자 포트폴리오 강제 삭제
+app.delete('/api/admin/portfolios/:id', adminMiddleware, async (req, res) => {
+  try {
+    const check = await pool.query('SELECT main_image FROM portfolios WHERE id = $1', [req.params.id]);
+    if (check.rows.length === 0) return res.status(404).json({ success: false, message: '포트폴리오를 찾을 수 없습니다.' });
+
+    if (useCloudinary) {
+      const mediaRows = await pool.query('SELECT media_url FROM portfolio_media WHERE portfolio_id = $1', [req.params.id]).catch(() => ({ rows: [] }));
+      const allUrls = [check.rows[0].main_image, ...mediaRows.rows.map(r => r.media_url)].filter(Boolean);
+      await Promise.all(allUrls.map(url => deleteFromCloudinary(url)));
+    }
+
+    await pool.query('DELETE FROM portfolios WHERE id = $1', [req.params.id]);
+    res.json({ success: true, message: '포트폴리오가 삭제되었습니다.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: '포트폴리오 삭제 오류' });
+  }
+});
+
+// 전체 댓글 목록 (관리자용)
+app.get('/api/admin/comments', adminMiddleware, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT c.*, u.nickname, u.username, p.title AS portfolio_title
+       FROM portfolio_comments c
+       JOIN users u ON c.user_id = u.id
+       JOIN portfolios p ON c.portfolio_id = p.id
+       ORDER BY c.created_at DESC`
+    );
+    res.json({ success: true, comments: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: '댓글 목록 조회 오류' });
+  }
+});
+
+// 관리자 댓글 강제 삭제
+app.delete('/api/admin/comments/:id', adminMiddleware, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM portfolio_comments WHERE id = $1', [req.params.id]);
+    res.json({ success: true, message: '댓글이 삭제되었습니다.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: '댓글 삭제 오류' });
+  }
+});
 app.listen(PORT, () => {
   console.log(`✅ 서버가 포트 ${PORT}에서 실행중입니다.`);
 });

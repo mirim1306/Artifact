@@ -5,6 +5,7 @@ import ProjectDetail from './components/ProjectDetail';
 import AuthPage from './components/Authpage';
 import RegisterPage from './components/Registerpage';
 import MyPage from './components/Mypage';
+import AdminPage from './components/AdminPage';
 import { portfolioAPI } from './Api';
 
 const GlobalStyle = createGlobalStyle`
@@ -18,7 +19,7 @@ const GlobalStyle = createGlobalStyle`
 `;
 
 type Category = '전체' | '앱' | '웹' | '디자인' | '게임';
-type NavTab = 'home' | 'register' | 'mypage';
+type NavTab = 'home' | 'register' | 'mypage' | 'admin';
 
 interface Project {
   id: number;
@@ -40,6 +41,7 @@ interface User {
   nickname: string;
   email: string;
   created_at?: string;
+  is_admin?: boolean;
 }
 
 interface SliderItem {
@@ -61,7 +63,7 @@ const App = () => {
   const [tab, setTab] = useState<Category>('전체');
   const navigate = useNavigate();
   const location = useLocation();
-  const navTab: NavTab = location.pathname === '/register' ? 'register' : location.pathname === '/mypage' ? 'mypage' : 'home';
+  const navTab: NavTab = location.pathname === '/register' ? 'register' : location.pathname === '/mypage' ? 'mypage' : location.pathname === '/admin' ? 'admin' : 'home';
   const isAuthPage = location.pathname === '/login';
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -190,6 +192,9 @@ const App = () => {
         onEdit={(p: Project) => { setEditPortfolio(p); navigate('/register'); }}
         onLogout={handleLogout} />;
 
+    if (navTab === 'admin' && user?.is_admin)
+      return <AdminPage onBack={() => navigate('/')} />;
+
     return (
       <>
         {sliderItems.length > 0 && (
@@ -308,6 +313,7 @@ const App = () => {
               {user ? (
                 <>
                   <NicknameText>👋 {user.nickname}</NicknameText>
+                  {user.is_admin && <HeaderButton $outline onClick={() => navigate('/admin')}>관리자</HeaderButton>}
                   <HeaderButton $outline onClick={handleLogout}>로그아웃</HeaderButton>
                 </>
               ) : (
