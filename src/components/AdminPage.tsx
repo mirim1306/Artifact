@@ -44,7 +44,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
 
   useEffect(() => { fetchData(tab); }, [tab]);
 
-  const deleteUser = async (id: number, nickname: string) => {
+  const deleteUser = async (id: number) => {
     const res = await adminFetch(`/api/admin/users/${id}`, { method: 'DELETE' });
     if (res.success) setUsers(users.filter(u => u.id !== id));
   };
@@ -90,7 +90,7 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
                     <Td>{u.is_admin ? '✅' : ''}</Td>
                     <Td>
                       {!u.is_admin && (
-                        <DeleteBtn onClick={() => deleteUser(u.id, u.nickname)}>탈퇴</DeleteBtn>
+                        <DeleteBtn onClick={() => deleteUser(u.id)}>탈퇴</DeleteBtn>
                       )}
                     </Td>
                   </tr>
