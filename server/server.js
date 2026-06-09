@@ -367,7 +367,7 @@ app.get('/api/my/portfolios', authMiddleware, async (req, res) => {
 // 포트폴리오 등록
 app.post('/api/portfolios', authMiddleware, upload.fields([
   { name: 'main_image', maxCount: 1 },
-  { name: 'media_files', maxCount: 20 },
+  { name: 'extra_images', maxCount: 100 },
 ]), async (req, res) => {
   const {
     title, category, service_intro,
@@ -406,7 +406,7 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
     const portfolioId = result.rows[0].id;
 
     // 추가 미디어 파일 저장
-    const media_files = req.files?.['media_files'] || [];
+    const media_files = req.files?.['extra_images'] || [];
     for (let i = 0; i < media_files.length; i++) {
       const isVideo = media_files[i].mimetype.startsWith('video/');
       const mediaUrl = await uploadFile(media_files[i].path, 'portfolio_media');
