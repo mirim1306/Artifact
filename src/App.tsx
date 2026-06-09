@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import styled, { createGlobalStyle, css } from 'styled-components';
 import ProjectDetail from './components/ProjectDetail';
 import AuthPage from './components/Authpage';
@@ -58,7 +59,9 @@ const getImageUrl = (url: string | undefined): string => {
 
 const App = () => {
   const [tab, setTab] = useState<Category>('전체');
-  const [navTab, setNavTab] = useState<NavTab>('home');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const navTab: NavTab = location.pathname === '/register' ? 'register' : location.pathname === '/mypage' ? 'mypage' : 'home';
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [showAuth, setShowAuth] = useState(false);
@@ -128,24 +131,24 @@ const App = () => {
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    setNavTab('home');
+    navigate('/');
     setSelectedProject(null);
   };
 
   const handleNavRegister = () => {
     if (!user) { setShowAuth(true); return; }
-    setNavTab('register');
+    navigate('/register');
     setSelectedProject(null);
   };
 
   const handleNavMypage = () => {
     if (!user) { setShowAuth(true); return; }
-    setNavTab('mypage');
+    navigate('/mypage');
     setSelectedProject(null);
   };
 
   const handleNavHome = () => {
-    setNavTab('home');
+    navigate('/');
     setSelectedProject(null);
   };
 
@@ -164,7 +167,7 @@ const App = () => {
         <RegisterPage
 
           onSuccess={() => {
-            setNavTab('home');
+            navigate('/');
             setSliderIndex(0);
             setEditPortfolio(null);
             setRefreshTrigger(prev => prev + 1);
@@ -175,8 +178,8 @@ const App = () => {
     }
 
     if (navTab === 'mypage' && user)
-      return <MyPage user={user} onRegister={() => setNavTab('register')}
-        onEdit={(p: Project) => { setEditPortfolio(p); setNavTab('register'); }}
+      return <MyPage user={user} onRegister={() => navigate('/register')}
+        onEdit={(p: Project) => { setEditPortfolio(p); navigate('/register'); }}
         onLogout={handleLogout} />;
 
     return (

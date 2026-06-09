@@ -30,3 +30,5 @@ server/uploads/
 *.njsproj
 *.sln
 *.sw?
+
+*.pem
