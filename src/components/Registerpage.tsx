@@ -79,6 +79,15 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
           : `http://localhost:4000${editData.main_image}`;
         setMainImagePreview(url);
       }
+      // 기존 추가 이미지 미리보기 복원 (URL만, 재업로드 안 함)
+      if (editData.media && Array.isArray(editData.media) && editData.media.length > 0) {
+        const urls = editData.media.map((m: any) => {
+          const u = m.media_url || m.url || '';
+          return u.startsWith('http') ? u : `http://localhost:4000${u}`;
+        });
+        setDesignImagePreviews(urls);
+        // 실제 File 객체는 없으므로 빈 배열 유지 (변경 없으면 서버에 새 파일 안 보냄)
+      }
     }
   }, [editData]);
 
@@ -111,7 +120,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
     const finalSubs = subCategories.map(s => s === '기타' && customSubCategory.trim() ? customSubCategory.trim() : s);
     if (finalSubs.length > 0) formData.append('sub_categories', finalSubs.join(','));
     if (mainImageFile) formData.append('main_image', mainImageFile);
-    designImages.forEach(file => formData.append('media_files', file));
+    designImages.forEach(file => formData.append('extra_images', file));
 
     const res = isEdit
       ? await portfolioAPI.update(editData.id, formData)

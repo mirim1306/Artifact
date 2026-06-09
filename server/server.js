@@ -469,6 +469,24 @@ app.put('/api/portfolios/:id', authMiddleware, upload.fields([
 
     const result = await pool.query(query, params);
 
+    // 디자인 추가 이미지 처리
+    const extra_images = req.files?.['extra_images'] || [];
+    if (extra_images.length > 0) {
+      // 기존 media 삭제 후 새로 저장
+      const oldMedia = await pool.query('SELECT media_url FROM portfolio_media WHERE portfolio_id = $1', [req.params.id]).catch(() => ({ rows: [] }));
+      if (useCloudinary) {
+        await Promise.all(oldMedia.rows.map(r => deleteFromCloudinary(r.media_url)));
+      }
+      await pool.query('DELETE FROM portfolio_media WHERE portfolio_id = $1', [req.params.id]).catch(() => {});
+      for (let i = 0; i < extra_images.length; i++) {
+        const mediaUrl = await uploadFile(extra_images[i].path, 'portfolio_media');
+        await pool.query(
+          'INSERT INTO portfolio_media (portfolio_id, media_url, media_type, order_num) VALUES ($1, $2, $3, $4)',
+          [req.params.id, mediaUrl, 'image', i]
+        );
+      }
+    }
+
     res.json({ success: true, message: '포트폴리오가 수정되었습니다!', portfolio: result.rows[0] });
   } catch (err) {
     console.error(err);
