@@ -114,7 +114,11 @@ const MyPage: React.FC<MyPageProps> = ({ user, onRegister, onEdit, onLogout, onD
                   <span>👁 {p.view_count || 0}</span>
                 </CardStats>
                 <ButtonRow>
-                  <EditBtn onClick={() => onEdit(p)}>수정</EditBtn>
+                  <EditBtn onClick={async () => {
+                    const res = await portfolioAPI.getOne(p.id);
+                    if (res.success) onEdit(res.portfolio);
+                    else onEdit(p);
+                  }}>수정</EditBtn>
                   <DeleteBtn onClick={() => handleDelete(p.id)}>삭제</DeleteBtn>
                 </ButtonRow>
               </CardBody>

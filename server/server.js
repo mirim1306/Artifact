@@ -536,6 +536,28 @@ app.delete('/api/portfolios/:id', authMiddleware, async (req, res) => {
 // 좋아요 API
 // ══════════════════════════════════════════════════════════════
 
+// 좋아요 상태 조회
+app.get('/api/portfolios/:id/like', optionalAuth, async (req, res) => {
+  try {
+    const countResult = await pool.query(
+      'SELECT COUNT(*) FROM portfolio_likes WHERE portfolio_id = $1',
+      [req.params.id]
+    );
+    const count = parseInt(countResult.rows[0].count);
+    let liked = false;
+    if (req.user) {
+      const likeResult = await pool.query(
+        'SELECT id FROM portfolio_likes WHERE portfolio_id = $1 AND user_id = $2',
+        [req.params.id, req.user.id]
+      );
+      liked = likeResult.rows.length > 0;
+    }
+    res.json({ success: true, liked, count });
+  } catch (err) {
+    res.status(500).json({ success: false, liked: false, count: 0 });
+  }
+});
+
 app.post('/api/portfolios/:id/like', authMiddleware, async (req, res) => {
   try {
     const existing = await pool.query(
