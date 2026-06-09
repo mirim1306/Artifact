@@ -25,6 +25,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
   const [designImages, setDesignImages] = useState<File[]>([]);
   const [designImagePreviews, setDesignImagePreviews] = useState<string[]>([]);
+  const [existingMediaUrls, setExistingMediaUrls] = useState<string[]>([]);
   const [subCategories, setSubCategories] = useState<string[]>([]);
   const [customCategory, setCustomCategory] = useState('');
   const [customSubCategory, setCustomSubCategory] = useState('');
@@ -87,6 +88,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
           return u.startsWith('http') ? u : `http://localhost:4000${u.startsWith('/') ? '' : '/'}${u}`;
         });
         setDesignImagePreviews(urls);
+        setExistingMediaUrls(urls);
       }
     }
   }, [editData]);
@@ -120,7 +122,12 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
     const finalSubs = subCategories.map(s => s === '기타' && customSubCategory.trim() ? customSubCategory.trim() : s);
     if (finalSubs.length > 0) formData.append('sub_categories', finalSubs.join(','));
     if (mainImageFile) formData.append('main_image', mainImageFile);
-    designImages.forEach(file => formData.append('extra_images', file));
+    if (designImages.length > 0) {
+      designImages.forEach(file => formData.append('extra_images', file));
+    } else if (isEdit && existingMediaUrls.length > 0) {
+      // 새 이미지 없으면 기존 URL 유지 신호 전달
+      formData.append('keep_existing_media', 'true');
+    }
 
     const res = isEdit
       ? await portfolioAPI.update(editData.id, formData)
@@ -306,6 +313,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
                           e.stopPropagation();
                           setDesignImages(prev => prev.filter((_, idx) => idx !== i));
                           setDesignImagePreviews(prev => prev.filter((_, idx) => idx !== i));
+                          setExistingMediaUrls(prev => prev.filter((_, idx) => idx !== i));
                         }}>×</RemoveBtn>
                       </PreviewThumb>
                     ))}

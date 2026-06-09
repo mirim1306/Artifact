@@ -471,8 +471,10 @@ app.put('/api/portfolios/:id', authMiddleware, upload.fields([
 
     // 디자인 추가 이미지 처리
     const extra_images = req.files?.['extra_images'] || [];
+    const keepExistingMedia = req.body.keep_existing_media === 'true';
+
     if (extra_images.length > 0) {
-      // 기존 media 삭제 후 새로 저장
+      // 새 이미지가 있으면 기존 미디어 삭제 후 새로 저장
       const oldMedia = await pool.query('SELECT media_url FROM portfolio_media WHERE portfolio_id = $1', [req.params.id]).catch(() => ({ rows: [] }));
       if (useCloudinary) {
         await Promise.all(oldMedia.rows.map(r => deleteFromCloudinary(r.media_url)));
@@ -485,7 +487,15 @@ app.put('/api/portfolios/:id', authMiddleware, upload.fields([
           [req.params.id, mediaUrl, 'image', i]
         );
       }
+    } else if (!keepExistingMedia) {
+      // 새 이미지도 없고 유지 신호도 없으면 기존 미디어 전체 삭제
+      const oldMedia = await pool.query('SELECT media_url FROM portfolio_media WHERE portfolio_id = $1', [req.params.id]).catch(() => ({ rows: [] }));
+      if (useCloudinary) {
+        await Promise.all(oldMedia.rows.map(r => deleteFromCloudinary(r.media_url)));
+      }
+      await pool.query('DELETE FROM portfolio_media WHERE portfolio_id = $1', [req.params.id]).catch(() => {});
     }
+    // keepExistingMedia === true 이면 기존 미디어 그대로 유지 (아무것도 안 함)
 
     res.json({ success: true, message: '포트폴리오가 수정되었습니다!', portfolio: result.rows[0] });
   } catch (err) {
