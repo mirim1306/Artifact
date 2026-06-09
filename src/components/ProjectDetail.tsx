@@ -310,11 +310,12 @@ const SubTitle = styled.span`
   font-size: 16px; color: #7c6fcd; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
 `;
 const LikeButton = styled.button<{ $liked: boolean }>`
-  width: 100%; height: 48px; border-radius: 50px; border: 2px solid ${p => p.$liked ? '#ff6b9d' : 'rgba(255,255,255,0.15)'};
-  background: ${p => p.$liked ? 'rgba(255,107,157,0.15)' : 'transparent'};
-  color: ${p => p.$liked ? '#ff6b9d' : 'rgba(255,255,255,0.6)'};
+  width: 100%; height: 48px; border-radius: 50px;
+  border: 2px solid ${p => p.$liked ? '#ff2d55' : 'rgba(255,255,255,0.15)'};
+  background: ${p => p.$liked ? 'rgba(255,45,85,0.2)' : 'transparent'};
+  color: ${p => p.$liked ? '#ff2d55' : 'rgba(255,255,255,0.6)'};
   font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s;
-  &:hover { border-color: #ff6b9d; color: #ff6b9d; background: rgba(255,107,157,0.1); }
+  &:hover { border-color: #ff2d55; color: #ff2d55; background: rgba(255,45,85,0.15); transform: scale(1.02); }
 `;
 const RunButton = styled.button<{ $loading: boolean; $hasUrl: boolean }>`
   width: 100%; height: 56px; border-radius: 50px; border: none;

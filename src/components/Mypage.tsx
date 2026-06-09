@@ -32,9 +32,10 @@ interface MyPageProps {
   onRegister: () => void;
   onEdit: (portfolio: Portfolio) => void;
   onLogout: () => void;
+  onDelete?: () => void;
 }
 
-const MyPage: React.FC<MyPageProps> = ({ user, onRegister, onEdit, onLogout }) => {
+const MyPage: React.FC<MyPageProps> = ({ user, onRegister, onEdit, onLogout, onDelete }) => {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,6 +62,7 @@ const MyPage: React.FC<MyPageProps> = ({ user, onRegister, onEdit, onLogout }) =
     const res = await portfolioAPI.delete(id);
     if (res.success) {
       fetchPortfolios();
+      if (onDelete) onDelete();
     }
   };
 

@@ -190,6 +190,7 @@ const App = () => {
     if (navTab === 'mypage' && user)
       return <MyPage user={user} onRegister={() => navigate('/register')}
         onEdit={(p: Project) => { setEditPortfolio(p); navigate('/register'); }}
+        onDelete={() => { setSelectedProject(null); setRefreshTrigger(prev => prev + 1); }}
         onLogout={handleLogout} />;
 
     if (navTab === 'admin' && user?.is_admin)
