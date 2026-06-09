@@ -122,12 +122,12 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
     const finalSubs = subCategories.map(s => s === '기타' && customSubCategory.trim() ? customSubCategory.trim() : s);
     if (finalSubs.length > 0) formData.append('sub_categories', finalSubs.join(','));
     if (mainImageFile) formData.append('main_image', mainImageFile);
-    if (designImages.length > 0) {
-      designImages.forEach(file => formData.append('extra_images', file));
-    } else if (isEdit && existingMediaUrls.length > 0) {
-      // 새 이미지 없으면 기존 URL 유지 신호 전달
-      formData.append('keep_existing_media', 'true');
+    // 유지할 기존 이미지 URL 전달 (X로 삭제한 건 제외됨)
+    if (isEdit) {
+      existingMediaUrls.forEach(url => formData.append('keep_media_urls', url));
     }
+    // 새로 추가한 이미지 파일 전달
+    designImages.forEach(file => formData.append('extra_images', file));
 
     const res = isEdit
       ? await portfolioAPI.update(editData.id, formData)
