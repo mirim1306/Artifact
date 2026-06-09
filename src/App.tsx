@@ -62,9 +62,11 @@ const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const navTab: NavTab = location.pathname === '/register' ? 'register' : location.pathname === '/mypage' ? 'mypage' : 'home';
+  const isAuthPage = location.pathname === '/login';
+  const projectId = location.pathname.startsWith('/portfolio/') ? location.pathname.split('/')[2] : null;
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [showAuth, setShowAuth] = useState(false);
+
   const [portfolios, setPortfolios] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [sliderItems, setSliderItems] = useState<SliderItem[]>([]);
@@ -124,7 +126,7 @@ const App = () => {
     setUser(userData);
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
-    setShowAuth(false);
+    navigate('/');
   };
 
   const handleLogout = () => {
@@ -136,13 +138,13 @@ const App = () => {
   };
 
   const handleNavRegister = () => {
-    if (!user) { setShowAuth(true); return; }
+    if (!user) { navigate('/login'); return; }
     navigate('/register');
     setSelectedProject(null);
   };
 
   const handleNavMypage = () => {
-    if (!user) { setShowAuth(true); return; }
+    if (!user) { navigate('/login'); return; }
     navigate('/mypage');
     setSelectedProject(null);
   };
@@ -152,15 +154,15 @@ const App = () => {
     setSelectedProject(null);
   };
 
-  if (showAuth) return (
+  if (isAuthPage) return (
     <>
       <GlobalStyle />
-      <AuthPage onLogin={handleLogin} onBack={() => setShowAuth(false)} />
+      <AuthPage onLogin={handleLogin} onBack={() => navigate('/')} />
     </>
   );
 
   const renderContent = () => {
-    if (selectedProject) return <ProjectDetail project={selectedProject} onBack={() => setSelectedProject(null)} />;
+    if (selectedProject) return <ProjectDetail project={selectedProject} onBack={() => { setSelectedProject(null); navigate('/'); }} />;
 
     if (navTab === 'register') {
       return (
@@ -191,8 +193,8 @@ const App = () => {
                 {sliderItems.map((item, idx) => (
                   <SlideItem key={idx} onDoubleClick={async () => {
                     const res = await portfolioAPI.getOne(item.projectRef.id);
-                    if (res.success) setSelectedProject(res.portfolio);
-                    else setSelectedProject(item.projectRef);
+                    if (res.success) { setSelectedProject(res.portfolio); navigate(`/portfolio/${item.projectRef.id}`); }
+                    else { setSelectedProject(item.projectRef); navigate(`/portfolio/${item.projectRef.id}`); }
                   }}>
                     <img src={getImageUrl(item.image)} alt={item.title} />
                     <SliderOverlay><h2>{item.title}</h2></SliderOverlay>
@@ -247,8 +249,8 @@ const App = () => {
             portfolios.map(item => (
               <GridItem key={item.id} onDoubleClick={async () => {
                 const res = await portfolioAPI.getOne(item.id);
-                if (res.success) setSelectedProject(res.portfolio);
-                else setSelectedProject(item);
+                if (res.success) { setSelectedProject(res.portfolio); navigate(`/portfolio/${item.id}`); }
+                else { setSelectedProject(item); navigate(`/portfolio/${item.id}`); }
               }}>
                 <div className="image-box">
                   <img src={getImageUrl(item.main_image)} alt={item.title} />
@@ -303,7 +305,7 @@ const App = () => {
                   <HeaderButton $outline onClick={handleLogout}>로그아웃</HeaderButton>
                 </>
               ) : (
-                <HeaderButton onClick={() => setShowAuth(true)}>로그인 / 회원가입</HeaderButton>
+                <HeaderButton onClick={() => navigate('/login')}>로그인 / 회원가입</HeaderButton>
               )}
             </HeaderRight>
           </Header>
