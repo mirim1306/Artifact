@@ -274,14 +274,21 @@ app.get('/api/portfolios', optionalAuth, async (req, res) => {
     }
     if (search) {
       params.push(`%${search}%`);
-      query += ` AND (p.title ILIKE $${params.length} OR p.category ILIKE $${params.length} OR p.sub_categories ILIKE $${params.length} OR p.tech_environment ILIKE $${params.length} OR p.team_members ILIKE $${params.length} OR p.service_intro ILIKE $${params.length})`;
+      query += ` AND (p.title ILIKE $${params.length} OR u.nickname ILIKE $${params.length} OR p.category ILIKE $${params.length} OR p.sub_categories ILIKE $${params.length} OR p.tech_environment ILIKE $${params.length} OR p.team_members ILIKE $${params.length} OR p.service_intro ILIKE $${params.length})`;
     }
 
     query += ' GROUP BY p.id, u.nickname';
 
     if (search) {
       // 검색 시: 제목 일치 우선, 그 다음 최신순
-      query += ` ORDER BY (CASE WHEN p.title ILIKE $${params.length} THEN 0 ELSE 1 END), p.created_at DESC`;
+      query += ` ORDER BY
+        CASE
+          WHEN p.title ILIKE $${params.length} THEN 0
+          WHEN u.nickname ILIKE $${params.length} THEN 1
+          WHEN p.category ILIKE $${params.length} OR (p.sub_categories IS NOT NULL AND p.sub_categories ILIKE $${params.length}) THEN 2
+          ELSE 3
+        END,
+        p.created_at DESC`;
     } else if (sort === 'likes') {
       query += ' ORDER BY like_count DESC, p.created_at DESC';
     } else if (sort === 'views') {
