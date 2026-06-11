@@ -30,7 +30,7 @@ interface Project {
   run_link?: string; file_link?: string; store_link?: string; github_link?: string;
   tech_environment?: string; team_members?: string; dev_period?: string; design_tool?: string;
   nickname?: string; username?: string; email?: string; user_bio?: string;
-  comments?: Comment[]; like_count?: number; view_count?: number;
+  comments?: Comment[]; like_count?: number; view_count?: number; comments_enabled?: boolean;
 }
 
 interface ProjectDetailProps { project: Project; onBack: () => void; }
@@ -268,19 +268,22 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
       <CommentSection>
         <SectionLabel>COMMENTS ({comments.length})</SectionLabel>
 
-        <CommentInputRow>
-          <CommentInput
-            placeholder={currentUserId ? '댓글을 입력하세요...' : '로그인 후 댓글을 남길 수 있습니다.'}
-            value={commentInput}
-            onChange={e => setCommentInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddComment(); } }}
-            disabled={!currentUserId}
-          />
-          <CommentSubmitBtn onClick={handleAddComment} disabled={commentLoading || !currentUserId}>
-            {commentLoading ? '...' : '등록'}
-          </CommentSubmitBtn>
-        </CommentInputRow>
-
+        {project.comments_enabled === false ? (
+          <DisabledComment>댓글이 비활성화된 포트폴리오입니다.</DisabledComment>
+        ) : (
+          <CommentInputRow>
+            <CommentInput
+              placeholder={currentUserId ? '댓글을 입력하세요...' : '로그인 후 댓글을 남길 수 있습니다.'}
+              value={commentInput}
+              onChange={e => setCommentInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddComment(); } }}
+              disabled={!currentUserId}
+            />
+            <CommentSubmitBtn onClick={handleAddComment} disabled={commentLoading || !currentUserId}>
+              {commentLoading ? '...' : '등록'}
+            </CommentSubmitBtn>
+          </CommentInputRow>
+        )}
         {comments.length === 0 ? (
           <NoComment>아직 댓글이 없어요. 첫 댓글을 남겨보세요!</NoComment>
         ) : (
@@ -409,6 +412,7 @@ const CommentSubmitBtn = styled.button`
   padding: 0 28px; border-radius: 14px; border: none; background: #7c6fcd; color: white; font-size: 14px; font-weight: 700; cursor: pointer;
   &:hover:not(:disabled) { background: #9187d8; } &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;
+const DisabledComment = styled.p` text-align: center; color: rgba(255,255,255,0.3); padding: 30px 0; font-size: 14px; border: 1px dashed rgba(255,255,255,0.15); border-radius: 12px; `;
 const NoComment = styled.p` text-align: center; color: rgba(255,255,255,0.3); padding: 30px 0; font-size: 14px; `;
 const CommentList = styled.div` display: flex; flex-direction: column; gap: 16px; `;
 const CommentItem = styled.div` background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px 20px; `;

@@ -46,6 +46,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
     store_link: '',
     design_tool: '',
     design_link: '',
+    comments_enabled: 'true',
   });
 
   // 수정 모드면 기존 데이터로 폼 초기화
@@ -66,6 +67,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
         store_link: editData.store_link || '',
         design_tool: editData.design_tool || '',
         design_link: editData.design_link || '',
+        comments_enabled: editData.comments_enabled === false ? 'false' : 'true',
       });
       // 기존 메인 이미지 미리보기
       if (editData.sub_categories) {
@@ -181,6 +183,13 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
               <Select name="is_public" value={form.is_public} onChange={handleChange}>
                 <option value="true">공개</option>
                 <option value="false">비공개</option>
+              </Select>
+            </Col>
+            <Col>
+              <Label>댓글 허용</Label>
+              <Select name="comments_enabled" value={form.comments_enabled} onChange={handleChange}>
+                <option value="true">허용</option>
+                <option value="false">비허용</option>
               </Select>
             </Col>
           </Row>
@@ -344,6 +353,17 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
           )}
         </Section>
 
+        <CheckRow>
+          <CheckLabel>
+            <input
+              type="checkbox"
+              checked={form.comments_enabled === 'true'}
+              onChange={e => setForm({ ...form, comments_enabled: e.target.checked ? 'true' : 'false' })}
+            />
+            <span>댓글 허용</span>
+          </CheckLabel>
+        </CheckRow>
+
         <SubmitButton type="submit" disabled={loading}>
           {loading ? (isEdit ? '수정 중...' : '등록 중...') : (isEdit ? '포트폴리오 수정' : '포트폴리오 등록')}
         </SubmitButton>
@@ -438,6 +458,11 @@ const SubmitButton = styled.button`
   &:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 `;
 const ErrorMsg = styled.p` color: #ff6b6b; font-size: 14px; text-align: center; margin: 0; `;
+const CheckRow = styled.div` display: flex; align-items: center; padding: 4px 0; `;
+const CheckLabel = styled.label`
+  display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 15px; color: rgba(255,255,255,0.8);
+  input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #7b2cbf; }
+`;
 const SubCategoryRow = styled.div` display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; `;
 const SubCategoryChip = styled.button<{ $active: boolean }>`
   padding: 8px 20px; border-radius: 50px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s;
