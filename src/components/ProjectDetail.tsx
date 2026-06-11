@@ -16,39 +16,24 @@ interface Comment {
   nickname: string;
   username: string;
   created_at: string;
+  like_count?: number;
+  dislike_count?: number;
+  user_liked?: boolean;
+  user_disliked?: boolean;
 }
 
 interface Project {
-  id: number;
-  title: string;
-  category: string;
-  main_image: string;
+  id: number; title: string; category: string; main_image: string;
   media?: { media_url: string; media_type: string }[];
   media_files?: (string | MediaFile)[];
-  service_intro?: string;
-  main_features?: string;
-  detail_desc?: string;
-  run_link?: string;
-  file_link?: string;
-  store_link?: string;
-  github_link?: string;
-  tech_environment?: string;
-  team_members?: string;
-  dev_period?: string;
-  design_tool?: string;
-  nickname?: string;
-  username?: string;
-  email?: string;
-  user_bio?: string;
-  comments?: Comment[];
-  like_count?: number;
-  view_count?: number;
+  service_intro?: string; main_features?: string; detail_desc?: string;
+  run_link?: string; file_link?: string; store_link?: string; github_link?: string;
+  tech_environment?: string; team_members?: string; dev_period?: string; design_tool?: string;
+  nickname?: string; username?: string; email?: string; user_bio?: string;
+  comments?: Comment[]; like_count?: number; view_count?: number;
 }
 
-interface ProjectDetailProps {
-  project: Project;
-  onBack: () => void;
-}
+interface ProjectDetailProps { project: Project; onBack: () => void; }
 
 const getMediaUrl = (url: string): string => {
   if (!url) return '/artifact-logo.png';
@@ -64,42 +49,97 @@ const getCurrentUserId = (): number | null => {
 const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
   const [isRunLoading, setIsRunLoading] = useState(false);
   const [activeMedia, setActiveMedia] = useState<{ url: string; isVideo: boolean } | null>(null);
+
+  // 포트폴리오 좋아요/싫어요
   const [liked, setLiked] = useState(false);
+  const [disliked, setDisliked] = useState(false);
   const [likeCount, setLikeCount] = useState(project.like_count || 0);
+  const [dislikeCount, setDislikeCount] = useState(0);
+
+  // 댓글
   const [comments, setComments] = useState<Comment[]>(project.comments || []);
   const [commentInput, setCommentInput] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
+
+  // 댓글 수정
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editingContent, setEditingContent] = useState('');
+
   const currentUserId = getCurrentUserId();
 
   useEffect(() => {
-    if (currentUserId) {
-      likeAPI.getStatus(project.id).then(res => {
-        if (res.success) { setLiked(res.liked); setLikeCount(res.count); }
-      });
-    }
-  }, [project.id, currentUserId]);
+    // 포트폴리오 좋아요/싫어요 상태
+    likeAPI.getStatus(project.id).then(res => {
+      if (res.success) { setLiked(res.liked); setLikeCount(res.count); }
+    });
+    likeAPI.getDislikeStatus(project.id).then(res => {
+      if (res.success) { setDisliked(res.disliked); setDislikeCount(res.count); }
+    });
+    // 댓글 최신 상태 (좋아요/싫어요 포함)
+    commentAPI.getAll(project.id).then(res => {
+      if (res.success) setComments(res.comments);
+    });
+  }, [project.id]);
 
   const handleLike = async () => {
     if (!currentUserId) return;
     const res = await likeAPI.toggle(project.id);
-    if (res.success) { setLiked(res.liked); setLikeCount(res.count); }
+    if (res.success) { setLiked(res.liked); setDisliked(false); setLikeCount(res.count); setDislikeCount(res.dislikeCount ?? dislikeCount); }
+  };
+
+  const handleDislike = async () => {
+    if (!currentUserId) return;
+    const res = await likeAPI.toggleDislike(project.id);
+    if (res.success) { setDisliked(res.disliked); setLiked(false); setDislikeCount(res.dislikeCount); setLikeCount(res.likeCount); }
   };
 
   const handleAddComment = async () => {
-    if (!currentUserId) return;
-    if (!commentInput.trim()) return;
+    if (!currentUserId || !commentInput.trim()) return;
     setCommentLoading(true);
     const res = await commentAPI.create(project.id, commentInput);
-    if (res.success) {
-      setComments([res.comment, ...comments]);
-      setCommentInput('');
-    }
+    if (res.success) { setComments([res.comment, ...comments]); setCommentInput(''); }
     setCommentLoading(false);
   };
 
   const handleDeleteComment = async (id: number) => {
     const res = await commentAPI.delete(id);
     if (res.success) setComments(comments.filter(c => c.id !== id));
+  };
+
+  const handleEditStart = (c: Comment) => {
+    setEditingCommentId(c.id);
+    setEditingContent(c.content);
+  };
+
+  const handleEditSave = async (id: number) => {
+    if (!editingContent.trim()) return;
+    const res = await commentAPI.update(id, editingContent);
+    if (res.success) {
+      setComments(comments.map(c => c.id === id ? { ...c, content: editingContent } : c));
+      setEditingCommentId(null);
+    }
+  };
+
+  const handleCommentLike = async (id: number) => {
+    if (!currentUserId) return;
+    const res = await commentAPI.like(id);
+    if (res.success) {
+      setComments(comments.map(c => c.id === id
+        ? { ...c, user_liked: res.liked, user_disliked: false, like_count: res.likeCount, dislike_count: res.dislikeCount }
+        : c
+      ));
+    }
+  };
+
+  const handleCommentDislike = async (id: number) => {
+    if (!currentUserId) return;
+    const res = await commentAPI.dislike(id);
+    if (res.success) {
+      setComments(comments.map(c => c.id === id
+        ? { ...c, user_liked: false, user_disliked: res.disliked, like_count: res.likeCount, dislike_count: res.dislikeCount }
+        : c
+      ));
+    }
   };
 
   const getUrl = () => project.run_link || project.file_link || project.store_link || null;
@@ -118,18 +158,15 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
     }, 1500);
   };
 
-  // media 배열 정규화 (서버 응답 media[] 또는 레거시 media_files[] 모두 처리)
   const mediaList: { url: string; isVideo: boolean }[] = (() => {
-    if (project.media && project.media.length > 0) {
+    if (project.media && project.media.length > 0)
       return project.media.map(m => ({ url: getMediaUrl(m.media_url), isVideo: m.media_type === 'video' }));
-    }
-    if (project.media_files && project.media_files.length > 0) {
+    if (project.media_files && project.media_files.length > 0)
       return project.media_files.map(f => {
         const url = typeof f === 'string' ? getMediaUrl(f) : getMediaUrl(f.url);
         const isVideo = typeof f === 'string' ? f.endsWith('.mp4') || f.endsWith('.webm') : f.type === 'video';
         return { url, isVideo };
       });
-    }
     return [];
   })();
 
@@ -144,30 +181,32 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
       </Header>
 
       <MainContent>
-        {/* ── 좌측 메타 ── */}
         <InfoSide>
           <TitleBox>
             <MainTitle>{project.title}</MainTitle>
             <SubTitle>{project.category}</SubTitle>
           </TitleBox>
 
-          {/* 좋아요 버튼 */}
-          <LikeButton $liked={liked} onClick={handleLike}>
-            {liked ? '❤️' : '🤍'} {likeCount}
-          </LikeButton>
+          {/* 좋아요/싫어요 버튼 */}
+          <ReactionRow>
+            <ReactionBtn $active={liked} $color="#ff2d55" onClick={handleLike}>
+              {liked ? '❤️' : '🤍'} {likeCount}
+            </ReactionBtn>
+            <ReactionBtn $active={disliked} $color="#6c757d" onClick={handleDislike}>
+              {disliked ? '👎' : '👎🏻'} {dislikeCount}
+            </ReactionBtn>
+          </ReactionRow>
 
           <RunButton onClick={handleRunService} disabled={isRunLoading} $loading={isRunLoading} $hasUrl={!!url}>
             <span className="btn-text">{isRunLoading ? '실행 중...' : url ? '실행' : '준비 중'}</span>
             {!isRunLoading && url && <span className="icon">▶</span>}
           </RunButton>
 
-
           <MetaInfo>
             {project.dev_period && <MetaItem><MetaLabel>개발 기간</MetaLabel><MetaValue>{project.dev_period}</MetaValue></MetaItem>}
             {project.team_members && <MetaItem><MetaLabel>팀원</MetaLabel><MetaValue>{project.team_members}</MetaValue></MetaItem>}
             {project.tech_environment && <MetaItem><MetaLabel>기술 스택 / 환경</MetaLabel><MetaValue>{project.tech_environment}</MetaValue></MetaItem>}
             {project.design_tool && <MetaItem><MetaLabel>사용 디자인 툴</MetaLabel><MetaValue>{project.design_tool}</MetaValue></MetaItem>}
-
             {project.category === '웹' && project.run_link && <MetaItem><MetaLabel>웹 실행 URL</MetaLabel><MetaValue><a href={project.run_link} target="_blank" rel="noreferrer">{project.run_link}</a></MetaValue></MetaItem>}
             {project.category === '앱' && project.store_link && <MetaItem><MetaLabel>스토어 링크</MetaLabel><MetaValue><a href={project.store_link} target="_blank" rel="noreferrer">{project.store_link}</a></MetaValue></MetaItem>}
             {project.category === '게임' && (
@@ -177,10 +216,8 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
               </>
             )}
             {project.github_link && <MetaItem><MetaLabel>GitHub</MetaLabel><MetaValue><a href={project.github_link} target="_blank" rel="noreferrer">{project.github_link}</a></MetaValue></MetaItem>}
-
             {project.main_features && <MetaItem><MetaLabel>주요 기능</MetaLabel><MetaValueBox>{project.main_features}</MetaValueBox></MetaItem>}
             {project.detail_desc && <MetaItem><MetaLabel>상세 설명</MetaLabel><MetaValueBox>{project.detail_desc}</MetaValueBox></MetaItem>}
-
             <UserDivider />
             <MetaItem><MetaLabel>등록자</MetaLabel><MetaValue>{project.nickname || '이름 없음'}</MetaValue></MetaItem>
             {project.username && <MetaItem><MetaLabel>사용자 ID</MetaLabel><MetaValue>@{project.username}</MetaValue></MetaItem>}
@@ -188,35 +225,23 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
           </MetaInfo>
         </InfoSide>
 
-        {/* ── 우측 이미지 ── */}
         <ImageSide>
           <MainImageWrapper>
-            {activeMedia ? (
-              activeMedia.isVideo
+            {activeMedia
+              ? activeMedia.isVideo
                 ? <MainVideo src={activeMedia.url} controls autoPlay muted playsInline />
                 : <ProjectImage src={activeMedia.url} alt="Active Media" />
-            ) : (
-              <ProjectImage src={mainImageUrl} alt="Project Main" />
-            )}
+              : <ProjectImage src={mainImageUrl} alt="Project Main" />
+            }
           </MainImageWrapper>
           {mediaList.length > 0 && (
             <MediaGrid>
-              {/* 메인 이미지도 썸네일로 */}
-              <MediaItemBox
-                $active={activeMedia === null}
-                onClick={() => setActiveMedia(null)}
-              >
+              <MediaItemBox $active={activeMedia === null} onClick={() => setActiveMedia(null)}>
                 <img src={mainImageUrl} alt="main" />
               </MediaItemBox>
               {mediaList.map((m, i) => (
-                <MediaItemBox
-                  key={i}
-                  $active={activeMedia?.url === m.url}
-                  onClick={() => setActiveMedia(m)}
-                >
-                  {m.isVideo
-                    ? <video src={m.url} muted playsInline />
-                    : <img src={m.url} alt={`media-${i}`} />}
+                <MediaItemBox key={i} $active={activeMedia?.url === m.url} onClick={() => setActiveMedia(m)}>
+                  {m.isVideo ? <video src={m.url} muted playsInline /> : <img src={m.url} alt={`media-${i}`} />}
                 </MediaItemBox>
               ))}
             </MediaGrid>
@@ -224,7 +249,6 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
         </ImageSide>
       </MainContent>
 
-      {/* ── 서비스 소개 ── */}
       <BottomSection>
         {project.service_intro && (
           <ContentBlock>
@@ -267,10 +291,41 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
                   <span className="nick">{c.nickname}</span>
                   <span className="date">{new Date(c.created_at).toLocaleDateString('ko-KR')}</span>
                   {currentUserId === c.user_id && (
-                    <DeleteCommentBtn onClick={() => handleDeleteComment(c.id)}>삭제</DeleteCommentBtn>
+                    <>
+                      {editingCommentId === c.id ? (
+                        <>
+                          <CommentActionBtn onClick={() => handleEditSave(c.id)}>저장</CommentActionBtn>
+                          <CommentActionBtn onClick={() => setEditingCommentId(null)}>취소</CommentActionBtn>
+                        </>
+                      ) : (
+                        <>
+                          <CommentActionBtn onClick={() => handleEditStart(c)}>수정</CommentActionBtn>
+                          <DeleteCommentBtn onClick={() => handleDeleteComment(c.id)}>삭제</DeleteCommentBtn>
+                        </>
+                      )}
+                    </>
                   )}
                 </CommentMeta>
-                <CommentContent>{c.content}</CommentContent>
+
+                {editingCommentId === c.id ? (
+                  <CommentEditInput
+                    value={editingContent}
+                    onChange={e => setEditingContent(e.target.value)}
+                    autoFocus
+                  />
+                ) : (
+                  <CommentContent>{c.content}</CommentContent>
+                )}
+
+                {/* 댓글 좋아요/싫어요 */}
+                <CommentReactionRow>
+                  <CommentReactionBtn $active={!!c.user_liked} $color="#ff2d55" onClick={() => handleCommentLike(c.id)} disabled={!currentUserId}>
+                    {c.user_liked ? '❤️' : '🤍'} {c.like_count || 0}
+                  </CommentReactionBtn>
+                  <CommentReactionBtn $active={!!c.user_disliked} $color="#6c757d" onClick={() => handleCommentDislike(c.id)} disabled={!currentUserId}>
+                    👎 {c.dislike_count || 0}
+                  </CommentReactionBtn>
+                </CommentReactionRow>
               </CommentItem>
             ))}
           </CommentList>
@@ -282,40 +337,27 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
 
 export default ProjectDetail;
 
-// ── 스타일 ──
 const FullContainer = styled.div`
   width: 100%; min-height: 100vh; padding: 40px 100px;
   display: flex; flex-direction: column; background: transparent;
   animation: ${fadeIn} 0.6s ease-out; box-sizing: border-box;
 `;
-const Header = styled.header`
-  width: 100%; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;
-`;
-const BackButton = styled.button`
-  background: none; border: none; color: rgba(255,255,255,0.4); font-size: 16px; cursor: pointer;
-  &:hover { color: white; }
-`;
+const Header = styled.header` width: 100%; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; `;
+const BackButton = styled.button` background: none; border: none; color: rgba(255,255,255,0.4); font-size: 16px; cursor: pointer; &:hover { color: white; } `;
 const ViewCount = styled.span` font-size: 14px; color: rgba(255,255,255,0.35); `;
-const MainContent = styled.div`
-  flex: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 60px;
-`;
-const InfoSide = styled.div`
-  display: flex; flex-direction: column; gap: 20px; min-width: 350px; max-width: 400px;
-`;
+const MainContent = styled.div` flex: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 60px; `;
+const InfoSide = styled.div` display: flex; flex-direction: column; gap: 20px; min-width: 350px; max-width: 400px; `;
 const TitleBox = styled.div` display: flex; flex-direction: column; gap: 8px; `;
-const MainTitle = styled.h1`
-  font-size: 40px; font-weight: 800; margin: 0; color: white; letter-spacing: -1px;
-`;
-const SubTitle = styled.span`
-  font-size: 16px; color: #7c6fcd; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-`;
-const LikeButton = styled.button<{ $liked: boolean }>`
-  width: 100%; height: 48px; border-radius: 50px;
-  border: 2px solid ${p => p.$liked ? '#ff2d55' : 'rgba(255,255,255,0.15)'};
-  background: ${p => p.$liked ? 'rgba(255,45,85,0.2)' : 'transparent'};
-  color: ${p => p.$liked ? '#ff2d55' : 'rgba(255,255,255,0.6)'};
-  font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s;
-  &:hover { border-color: #ff2d55; color: #ff2d55; background: rgba(255,45,85,0.15); transform: scale(1.02); }
+const MainTitle = styled.h1` font-size: 40px; font-weight: 800; margin: 0; color: white; letter-spacing: -1px; `;
+const SubTitle = styled.span` font-size: 16px; color: #7c6fcd; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; `;
+const ReactionRow = styled.div` display: flex; gap: 10px; `;
+const ReactionBtn = styled.button<{ $active: boolean; $color: string }>`
+  flex: 1; height: 48px; border-radius: 50px;
+  border: 2px solid ${p => p.$active ? p.$color : 'rgba(255,255,255,0.15)'};
+  background: ${p => p.$active ? `${p.$color}33` : 'transparent'};
+  color: ${p => p.$active ? p.$color : 'rgba(255,255,255,0.6)'};
+  font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+  &:hover { border-color: ${p => p.$color}; color: ${p => p.$color}; }
 `;
 const RunButton = styled.button<{ $loading: boolean; $hasUrl: boolean }>`
   width: 100%; height: 56px; border-radius: 50px; border: none;
@@ -328,27 +370,14 @@ const RunButton = styled.button<{ $loading: boolean; $hasUrl: boolean }>`
   &:hover { transform: ${p => (!p.$hasUrl || p.$loading) ? 'none' : 'scale(1.03)'}; }
   .btn-text { line-height: 1; } .icon { font-size: 13px; }
 `;
-const MetaInfo = styled.div`
-  display: flex; flex-direction: column; gap: 16px;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 16px; padding: 24px;
-`;
+const MetaInfo = styled.div` display: flex; flex-direction: column; gap: 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 24px; `;
 const MetaItem = styled.div` display: flex; flex-direction: column; gap: 6px; `;
-const MetaLabel = styled.span`
-  font-size: 11px; color: #7c6fcd; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
-`;
-const MetaValue = styled.span`
-  font-size: 14px; color: rgba(255,255,255,0.8); word-break: break-all;
-  a { color: #a29bfe; text-decoration: none; &:hover { text-decoration: underline; } }
-`;
-const MetaValueBox = styled.span`
-  font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.5; white-space: pre-line; word-break: break-all;
-`;
+const MetaLabel = styled.span` font-size: 11px; color: #7c6fcd; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; `;
+const MetaValue = styled.span` font-size: 14px; color: rgba(255,255,255,0.8); word-break: break-all; a { color: #a29bfe; text-decoration: none; &:hover { text-decoration: underline; } } `;
+const MetaValueBox = styled.span` font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.5; white-space: pre-line; word-break: break-all; `;
 const UserDivider = styled.div` margin: 8px 0; border-top: 1px dashed rgba(255,255,255,0.15); `;
 const ImageSide = styled.div` flex: 1; max-width: 750px; display: flex; flex-direction: column; gap: 16px; `;
-const MainImageWrapper = styled.div`
-  width: 100%; aspect-ratio: 16/10; background: rgba(255,255,255,0.05); border-radius: 30px; overflow: hidden;
-`;
+const MainImageWrapper = styled.div` width: 100%; aspect-ratio: 16/10; background: rgba(255,255,255,0.05); border-radius: 30px; overflow: hidden; `;
 const ProjectImage = styled.img` width: 100%; height: 100%; object-fit: cover; `;
 const MainVideo = styled.video` width: 100%; height: 100%; object-fit: cover; `;
 const MediaGrid = styled.div` display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; `;
@@ -359,57 +388,55 @@ const MediaItemBox = styled.div<{ $active?: boolean }>`
   img, video { width: 100%; height: 100%; object-fit: cover; }
   &:hover { border-color: #9187d8; transform: scale(1.03); }
 `;
-const BottomSection = styled.div`
-  margin-top: 50px; padding-bottom: 40px; display: flex; flex-direction: column; gap: 48px;
-`;
+const BottomSection = styled.div` margin-top: 50px; padding-bottom: 40px; display: flex; flex-direction: column; gap: 48px; `;
 const ContentBlock = styled.div`
   display: flex; flex-direction: column; gap: 16px; align-items: center;
   &.creator-block { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 30px; }
 `;
-const SectionLabel = styled.h3`
-  font-size: 14px; color: #7c6fcd; letter-spacing: 3px; margin: 0;
-  font-weight: 900; text-transform: uppercase; text-align: center;
-`;
-const DescriptionText = styled.p`
-  max-width: 850px; font-size: 16px; color: rgba(255,255,255,0.85);
-  line-height: 1.8; white-space: pre-line; margin: 0; text-align: center;
-`;
-
-// ── 댓글 스타일 ──
-const CommentSection = styled.div`
-  border-top: 1px solid rgba(255,255,255,0.08); padding-top: 40px; padding-bottom: 80px;
-  display: flex; flex-direction: column; gap: 24px;
-`;
+const SectionLabel = styled.h3` font-size: 14px; color: #7c6fcd; letter-spacing: 3px; margin: 0; font-weight: 900; text-transform: uppercase; text-align: center; `;
+const DescriptionText = styled.p` max-width: 850px; font-size: 16px; color: rgba(255,255,255,0.85); line-height: 1.8; white-space: pre-line; margin: 0; text-align: center; `;
+const CommentSection = styled.div` border-top: 1px solid rgba(255,255,255,0.08); padding-top: 40px; padding-bottom: 80px; display: flex; flex-direction: column; gap: 24px; `;
 const CommentInputRow = styled.div` display: flex; gap: 12px; `;
 const CommentInput = styled.textarea`
-  flex: 1; padding: 14px 18px; border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06);
-  color: white; font-size: 14px; resize: none; height: 52px; outline: none; font-family: inherit;
+  flex: 1; padding: 14px 18px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06); color: white; font-size: 14px; resize: none; height: 52px;
+  outline: none; font-family: inherit;
   &::placeholder { color: rgba(255,255,255,0.3); }
   &:focus { border-color: #7c6fcd; }
   &:disabled { opacity: 0.4; }
 `;
 const CommentSubmitBtn = styled.button`
-  padding: 0 28px; border-radius: 14px; border: none;
-  background: #7c6fcd; color: white; font-size: 14px; font-weight: 700; cursor: pointer;
-  &:hover:not(:disabled) { background: #9187d8; }
-  &:disabled { opacity: 0.4; cursor: not-allowed; }
+  padding: 0 28px; border-radius: 14px; border: none; background: #7c6fcd; color: white; font-size: 14px; font-weight: 700; cursor: pointer;
+  &:hover:not(:disabled) { background: #9187d8; } &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;
 const NoComment = styled.p` text-align: center; color: rgba(255,255,255,0.3); padding: 30px 0; font-size: 14px; `;
 const CommentList = styled.div` display: flex; flex-direction: column; gap: 16px; `;
-const CommentItem = styled.div`
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 14px; padding: 16px 20px;
-`;
+const CommentItem = styled.div` background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px 20px; `;
 const CommentMeta = styled.div`
   display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
   .nick { font-size: 14px; font-weight: 700; color: #bfbaf2; }
   .date { font-size: 12px; color: rgba(255,255,255,0.3); }
 `;
-const DeleteCommentBtn = styled.button`
-  margin-left: auto; background: none; border: none; color: rgba(255,100,100,0.5);
-  font-size: 12px; cursor: pointer; &:hover { color: #ff6b6b; }
+const CommentActionBtn = styled.button`
+  background: none; border: none; color: rgba(180,180,255,0.6); font-size: 12px; cursor: pointer;
+  &:hover { color: #bfbaf2; }
 `;
-const CommentContent = styled.p`
-  font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.6; margin: 0; white-space: pre-line;
+const DeleteCommentBtn = styled.button`
+  margin-left: auto; background: none; border: none; color: rgba(255,100,100,0.5); font-size: 12px; cursor: pointer;
+  &:hover { color: #ff6b6b; }
+`;
+const CommentContent = styled.p` font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.6; margin: 0; white-space: pre-line; `;
+const CommentEditInput = styled.textarea`
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #7c6fcd;
+  background: rgba(255,255,255,0.08); color: white; font-size: 14px; resize: none;
+  outline: none; font-family: inherit; min-height: 60px; box-sizing: border-box;
+`;
+const CommentReactionRow = styled.div` display: flex; gap: 8px; margin-top: 10px; `;
+const CommentReactionBtn = styled.button<{ $active: boolean; $color: string }>`
+  padding: 4px 12px; border-radius: 50px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  border: 1px solid ${p => p.$active ? p.$color : 'rgba(255,255,255,0.15)'};
+  background: ${p => p.$active ? `${p.$color}22` : 'transparent'};
+  color: ${p => p.$active ? p.$color : 'rgba(255,255,255,0.4)'};
+  &:hover:not(:disabled) { border-color: ${p => p.$color}; color: ${p => p.$color}; }
+  &:disabled { cursor: default; }
 `;

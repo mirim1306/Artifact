@@ -274,21 +274,14 @@ app.get('/api/portfolios', optionalAuth, async (req, res) => {
     }
     if (search) {
       params.push(`%${search}%`);
-      query += ` AND (p.title ILIKE $${params.length} OR u.nickname ILIKE $${params.length} OR p.category ILIKE $${params.length} OR p.sub_categories ILIKE $${params.length} OR p.tech_environment ILIKE $${params.length} OR p.team_members ILIKE $${params.length} OR p.service_intro ILIKE $${params.length})`;
+      query += ` AND (p.title ILIKE $${params.length} OR p.category ILIKE $${params.length} OR p.sub_categories ILIKE $${params.length} OR p.tech_environment ILIKE $${params.length} OR p.team_members ILIKE $${params.length} OR p.service_intro ILIKE $${params.length})`;
     }
 
     query += ' GROUP BY p.id, u.nickname';
 
     if (search) {
       // 검색 시: 제목 일치 우선, 그 다음 최신순
-      query += ` ORDER BY
-        CASE
-          WHEN p.title ILIKE $${params.length} THEN 0
-          WHEN u.nickname ILIKE $${params.length} THEN 1
-          WHEN p.category ILIKE $${params.length} OR (p.sub_categories IS NOT NULL AND p.sub_categories ILIKE $${params.length}) THEN 2
-          ELSE 3
-        END,
-        p.created_at DESC`;
+      query += ` ORDER BY (CASE WHEN p.title ILIKE $${params.length} THEN 0 ELSE 1 END), p.created_at DESC`;
     } else if (sort === 'likes') {
       query += ' ORDER BY like_count DESC, p.created_at DESC';
     } else if (sort === 'views') {
@@ -613,14 +606,29 @@ app.post('/api/portfolios/:id/like', authMiddleware, async (req, res) => {
 
 app.get('/api/portfolios/:id/comments', async (req, res) => {
   try {
+    const token = req.headers.authorization?.split(' ')[1];
+    let currentUserId = null;
+    if (token) {
+      try { currentUserId = jwt.verify(token, process.env.JWT_SECRET).id; } catch {}
+    }
     const result = await pool.query(`
-      SELECT c.*, u.nickname, u.username
+      SELECT c.*, u.nickname, u.username,
+        (SELECT COUNT(*) FROM comment_likes WHERE comment_id = c.id) AS like_count,
+        (SELECT COUNT(*) FROM comment_dislikes WHERE comment_id = c.id) AS dislike_count
       FROM portfolio_comments c
       JOIN users u ON c.user_id = u.id
       WHERE c.portfolio_id = $1
       ORDER BY c.created_at DESC
     `, [req.params.id]);
-    res.json({ success: true, comments: result.rows });
+    let comments = result.rows;
+    if (currentUserId) {
+      const liked = await pool.query('SELECT comment_id FROM comment_likes WHERE user_id = $1', [currentUserId]);
+      const disliked = await pool.query('SELECT comment_id FROM comment_dislikes WHERE user_id = $1', [currentUserId]);
+      const likedIds = new Set(liked.rows.map(r => r.comment_id));
+      const dislikedIds = new Set(disliked.rows.map(r => r.comment_id));
+      comments = comments.map(c => ({ ...c, user_liked: likedIds.has(c.id), user_disliked: dislikedIds.has(c.id) }));
+    }
+    res.json({ success: true, comments });
   } catch {
     res.status(500).json({ success: false, message: '댓글 조회 오류.' });
   }
@@ -762,6 +770,89 @@ app.delete('/api/admin/comments/:id', adminMiddleware, async (req, res) => {
     res.status(500).json({ success: false, message: '댓글 삭제 오류' });
   }
 });
+// ══════════════════════════════════════════════════════════════
+// 포트폴리오 싫어요 API
+// ══════════════════════════════════════════════════════════════
+
+app.get('/api/portfolios/:id/dislike', optionalAuth, async (req, res) => {
+  try {
+    const countResult = await pool.query('SELECT COUNT(*) FROM portfolio_dislikes WHERE portfolio_id = $1', [req.params.id]);
+    const count = parseInt(countResult.rows[0].count);
+    let disliked = false;
+    if (req.user) {
+      const r = await pool.query('SELECT id FROM portfolio_dislikes WHERE portfolio_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+      disliked = r.rows.length > 0;
+    }
+    res.json({ success: true, disliked, count });
+  } catch { res.status(500).json({ success: false, disliked: false, count: 0 }); }
+});
+
+app.post('/api/portfolios/:id/dislike', authMiddleware, async (req, res) => {
+  try {
+    const existing = await pool.query('SELECT id FROM portfolio_dislikes WHERE portfolio_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    if (existing.rows.length > 0) {
+      await pool.query('DELETE FROM portfolio_dislikes WHERE portfolio_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    } else {
+      await pool.query('INSERT INTO portfolio_dislikes (portfolio_id, user_id) VALUES ($1, $2)', [req.params.id, req.user.id]);
+      // 싫어요 누르면 좋아요 취소
+      await pool.query('DELETE FROM portfolio_likes WHERE portfolio_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    }
+    const dislikeCount = await pool.query('SELECT COUNT(*) FROM portfolio_dislikes WHERE portfolio_id = $1', [req.params.id]);
+    const likeCount = await pool.query('SELECT COUNT(*) FROM portfolio_likes WHERE portfolio_id = $1', [req.params.id]);
+    res.json({ success: true, disliked: existing.rows.length === 0, dislikeCount: parseInt(dislikeCount.rows[0].count), likeCount: parseInt(likeCount.rows[0].count) });
+  } catch (err) { console.error(err); res.status(500).json({ success: false }); }
+});
+
+// ══════════════════════════════════════════════════════════════
+// 댓글 수정 API
+// ══════════════════════════════════════════════════════════════
+
+app.put('/api/comments/:id', authMiddleware, async (req, res) => {
+  const { content } = req.body;
+  if (!content || !content.trim()) return res.status(400).json({ success: false, message: '내용을 입력해주세요.' });
+  try {
+    const check = await pool.query('SELECT user_id FROM portfolio_comments WHERE id = $1', [req.params.id]);
+    if (!check.rows.length) return res.status(404).json({ success: false });
+    if (check.rows[0].user_id !== req.user.id) return res.status(403).json({ success: false, message: '수정 권한이 없습니다.' });
+    await pool.query('UPDATE portfolio_comments SET content = $1 WHERE id = $2', [content.trim(), req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ success: false }); }
+});
+
+// ══════════════════════════════════════════════════════════════
+// 댓글 좋아요/싫어요 API
+// ══════════════════════════════════════════════════════════════
+
+app.post('/api/comments/:id/like', authMiddleware, async (req, res) => {
+  try {
+    const existing = await pool.query('SELECT id FROM comment_likes WHERE comment_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    if (existing.rows.length > 0) {
+      await pool.query('DELETE FROM comment_likes WHERE comment_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    } else {
+      await pool.query('INSERT INTO comment_likes (comment_id, user_id) VALUES ($1, $2)', [req.params.id, req.user.id]);
+      await pool.query('DELETE FROM comment_dislikes WHERE comment_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    }
+    const likes = await pool.query('SELECT COUNT(*) FROM comment_likes WHERE comment_id = $1', [req.params.id]);
+    const dislikes = await pool.query('SELECT COUNT(*) FROM comment_dislikes WHERE comment_id = $1', [req.params.id]);
+    res.json({ success: true, liked: existing.rows.length === 0, likeCount: parseInt(likes.rows[0].count), dislikeCount: parseInt(dislikes.rows[0].count) });
+  } catch (err) { res.status(500).json({ success: false }); }
+});
+
+app.post('/api/comments/:id/dislike', authMiddleware, async (req, res) => {
+  try {
+    const existing = await pool.query('SELECT id FROM comment_dislikes WHERE comment_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    if (existing.rows.length > 0) {
+      await pool.query('DELETE FROM comment_dislikes WHERE comment_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    } else {
+      await pool.query('INSERT INTO comment_dislikes (comment_id, user_id) VALUES ($1, $2)', [req.params.id, req.user.id]);
+      await pool.query('DELETE FROM comment_likes WHERE comment_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+    }
+    const dislikes = await pool.query('SELECT COUNT(*) FROM comment_dislikes WHERE comment_id = $1', [req.params.id]);
+    const likes = await pool.query('SELECT COUNT(*) FROM comment_likes WHERE comment_id = $1', [req.params.id]);
+    res.json({ success: true, disliked: existing.rows.length === 0, dislikeCount: parseInt(dislikes.rows[0].count), likeCount: parseInt(likes.rows[0].count) });
+  } catch (err) { res.status(500).json({ success: false }); }
+});
+
 app.listen(PORT, () => {
   console.log(`✅ 서버가 포트 ${PORT}에서 실행중입니다.`);
 });

@@ -49,12 +49,16 @@ export const portfolioAPI = {
   delete: (id: number) => fetchAPI(`/api/portfolios/${id}`, { method: 'DELETE' }),
 };
 
-// ── 좋아요 API ──
+// ── 좋아요/싫어요 API ──
 export const likeAPI = {
-  toggle: (portfolioId: number) =>
-    fetchAPI(`/api/portfolios/${portfolioId}/like`, { method: 'POST' }),
   getStatus: (portfolioId: number) =>
     fetchAPI(`/api/portfolios/${portfolioId}/like`),
+  toggle: (portfolioId: number) =>
+    fetchAPI(`/api/portfolios/${portfolioId}/like`, { method: 'POST' }),
+  getDislikeStatus: (portfolioId: number) =>
+    fetchAPI(`/api/portfolios/${portfolioId}/dislike`),
+  toggleDislike: (portfolioId: number) =>
+    fetchAPI(`/api/portfolios/${portfolioId}/dislike`, { method: 'POST' }),
 };
 
 // ── 댓글 API ──
@@ -66,6 +70,15 @@ export const commentAPI = {
       method: 'POST',
       body: JSON.stringify({ content }),
     }),
+  update: (commentId: number, content: string) =>
+    fetchAPI(`/api/comments/${commentId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    }),
   delete: (commentId: number) =>
     fetchAPI(`/api/comments/${commentId}`, { method: 'DELETE' }),
+  like: (commentId: number) =>
+    fetchAPI(`/api/comments/${commentId}/like`, { method: 'POST' }),
+  dislike: (commentId: number) =>
+    fetchAPI(`/api/comments/${commentId}/dislike`, { method: 'POST' }),
 };
