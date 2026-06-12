@@ -373,7 +373,7 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
     title, category, service_intro,
     main_features, tech_environment,
     team_members, dev_period, github_link, is_public,
-    run_link, file_link, store_link, design_tool, design_link, sub_categories,
+    run_link, file_link, store_link, design_tool, design_link, sub_categories, comments_enabled,
   } = req.body;
 
   if (!title || !category)
@@ -389,8 +389,8 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
       `INSERT INTO portfolios
         (user_id, title, category, sub_categories, main_image, service_intro,
         main_features, tech_environment, team_members, dev_period,
-        github_link, is_public, run_link, file_link, store_link, design_tool, design_link)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+        github_link, is_public, run_link, file_link, store_link, design_tool, design_link, comments_enabled)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
        RETURNING *`,
       [
         req.user.id, title, category, sub_categories || null, main_image_url,
@@ -399,7 +399,7 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
         dev_period || null, github_link || null,
         is_public === 'false' ? false : true,
         run_link || null, file_link || null, store_link || null, design_tool || null,
-        design_link || null,
+        design_link || null, comments_enabled === 'false' ? false : true,
       ]
     );
 
@@ -432,7 +432,7 @@ app.put('/api/portfolios/:id', authMiddleware, upload.fields([
     title, category, service_intro,
     main_features, tech_environment,
     team_members, dev_period, github_link, is_public,
-    run_link, file_link, store_link, design_tool, design_link, sub_categories,
+    run_link, file_link, store_link, design_tool, design_link, sub_categories, comments_enabled,
   } = req.body;
 
   try {
@@ -463,6 +463,7 @@ app.put('/api/portfolios/:id', authMiddleware, upload.fields([
     ];
 
     if (sub_categories !== undefined) { query += `, sub_categories=$${params.length + 1}`; params.push(sub_categories || null); }
+    if (comments_enabled !== undefined) { query += `, comments_enabled=$${params.length + 1}`; params.push(comments_enabled === 'false' ? false : true); }
     if (main_image_url) { query += `, main_image=$${params.length + 1}`; params.push(main_image_url); }
     query += ` WHERE id=$${params.length + 1} RETURNING *`;
     params.push(req.params.id);
