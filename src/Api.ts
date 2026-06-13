@@ -65,10 +65,10 @@ export const likeAPI = {
 export const commentAPI = {
   getAll: (portfolioId: number) =>
     fetchAPI(`/api/portfolios/${portfolioId}/comments`),
-  create: (portfolioId: number, content: string) =>
+  create: (portfolioId: number, content: string, parentId?: number) =>
     fetchAPI(`/api/portfolios/${portfolioId}/comments`, {
       method: 'POST',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, ...(parentId ? { parent_id: parentId } : {}) }),
     }),
   update: (commentId: number, content: string) =>
     fetchAPI(`/api/comments/${commentId}`, {

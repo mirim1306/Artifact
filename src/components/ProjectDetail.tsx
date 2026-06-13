@@ -16,10 +16,12 @@ interface Comment {
   nickname: string;
   username: string;
   created_at: string;
+  parent_id?: number | null;
   like_count?: number;
   dislike_count?: number;
   user_liked?: boolean;
   user_disliked?: boolean;
+  replies?: Comment[];
 }
 
 interface Project {
@@ -64,6 +66,8 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
   // 댓글 수정
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingContent, setEditingContent] = useState('');
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyInput, setReplyInput] = useState('');
 
   const currentUserId = getCurrentUserId();
 
@@ -99,6 +103,20 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
     const res = await commentAPI.create(project.id, commentInput);
     if (res.success) { setComments([res.comment, ...comments]); setCommentInput(''); }
     setCommentLoading(false);
+  };
+
+  const handleAddReply = async (parentId: number) => {
+    if (!currentUserId || !replyInput.trim()) return;
+    const res = await commentAPI.create(project.id, replyInput, parentId);
+    if (res.success) {
+      setComments(prev => prev.map(c =>
+        c.id === parentId
+          ? { ...c, replies: [...(c.replies || []), res.comment] }
+          : c
+      ));
+      setReplyInput('');
+      setReplyingTo(null);
+    }
   };
 
   const handleDeleteComment = async (id: number) => {
@@ -328,7 +346,48 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
                   <CommentReactionBtn $active={!!c.user_disliked} $color="#6c757d" onClick={() => handleCommentDislike(c.id)} disabled={!currentUserId}>
                     👎 {c.dislike_count || 0}
                   </CommentReactionBtn>
+                  {currentUserId && (
+                    <ReplyBtn onClick={() => { setReplyingTo(replyingTo === c.id ? null : c.id); setReplyInput(''); }}>
+                      💬 답글
+                    </ReplyBtn>
+                  )}
                 </CommentReactionRow>
+
+                {/* 답글 입력 */}
+                {replyingTo === c.id && (
+                  <ReplyInputRow>
+                    <CommentInput
+                      placeholder="답글을 입력하세요..."
+                      value={replyInput}
+                      onChange={e => setReplyInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddReply(c.id); } }}
+                    />
+                    <CommentSubmitBtn onClick={() => handleAddReply(c.id)}>등록</CommentSubmitBtn>
+                  </ReplyInputRow>
+                )}
+
+                {/* 대댓글 목록 */}
+                {c.replies && c.replies.length > 0 && (
+                  <ReplyList>
+                    {c.replies.map(r => (
+                      <ReplyItem key={r.id}>
+                        <CommentMeta>
+                          <span className="nick">↳ {r.nickname}</span>
+                          <span className="date">{new Date(r.created_at).toLocaleDateString('ko-KR')}</span>
+                          {currentUserId === r.user_id && (
+                            <DeleteCommentBtn onClick={async () => {
+                              const res = await commentAPI.delete(r.id);
+                              if (res.success) setComments(prev => prev.map(cc =>
+                                cc.id === c.id ? { ...cc, replies: (cc.replies || []).filter(rr => rr.id !== r.id) } : cc
+                              ));
+                            }}>삭제</DeleteCommentBtn>
+                          )}
+                        </CommentMeta>
+                        <CommentContent>{r.content}</CommentContent>
+                      </ReplyItem>
+                    ))}
+                  </ReplyList>
+                )}
               </CommentItem>
             ))}
           </CommentList>
@@ -413,6 +472,15 @@ const CommentSubmitBtn = styled.button`
   &:hover:not(:disabled) { background: #9187d8; } &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;
 const DisabledComment = styled.p` text-align: center; color: rgba(255,255,255,0.3); padding: 30px 0; font-size: 14px; border: 1px dashed rgba(255,255,255,0.15); border-radius: 12px; `;
+const ReplyBtn = styled.button`
+  background: none; border: none; color: rgba(255,255,255,0.4); font-size: 12px; cursor: pointer; padding: 2px 8px;
+  &:hover { color: #7c6fcd; }
+`;
+const ReplyInputRow = styled.div` display: flex; gap: 8px; margin-top: 10px; padding-left: 20px; `;
+const ReplyList = styled.div` display: flex; flex-direction: column; gap: 10px; margin-top: 12px; padding-left: 20px; border-left: 2px solid rgba(124,111,205,0.3); `;
+const ReplyItem = styled.div`
+  background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px;
+`;
 const NoComment = styled.p` text-align: center; color: rgba(255,255,255,0.3); padding: 30px 0; font-size: 14px; `;
 const CommentList = styled.div` display: flex; flex-direction: column; gap: 16px; `;
 const CommentItem = styled.div` background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 16px 20px; `;
