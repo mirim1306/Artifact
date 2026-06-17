@@ -72,18 +72,34 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
 
   const currentUserId = getCurrentUserId();
 
+  const buildCommentTree = (flat: Comment[]): Comment[] => {
+    const map: Record<number, Comment> = {};
+    const roots: Comment[] = [];
+    for (const c of flat) map[c.id] = { ...c, replies: [] };
+    for (const c of flat) {
+      if (c.parent_id && map[c.parent_id]) {
+        map[c.parent_id].replies!.push(map[c.id]);
+      } else if (!c.parent_id) {
+        roots.push(map[c.id]);
+      }
+    }
+    return roots;
+  };
+
+  const fetchComments = () => {
+    commentAPI.getAll(project.id).then(res => {
+      if (res.success) setComments(buildCommentTree(res.comments));
+    });
+  };
+
   useEffect(() => {
-    // 포트폴리오 좋아요/싫어요 상태
     likeAPI.getStatus(project.id).then(res => {
       if (res.success) { setLiked(res.liked); setLikeCount(res.count); }
     });
     likeAPI.getDislikeStatus(project.id).then(res => {
       if (res.success) { setDisliked(res.disliked); setDislikeCount(res.count); }
     });
-    // 댓글 최신 상태 (좋아요/싫어요 포함)
-    commentAPI.getAll(project.id).then(res => {
-      if (res.success) setComments(res.comments);
-    });
+    fetchComments();
   }, [project.id]);
 
   const handleLike = async () => {
@@ -110,11 +126,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
     if (!currentUserId || !replyInput.trim()) return;
     const res = await commentAPI.create(project.id, replyInput, parentId);
     if (res.success) {
-      setComments(prev => prev.map(c =>
-        c.id === parentId
-          ? { ...c, replies: [...(c.replies || []), res.comment] }
-          : c
-      ));
+      fetchComments();
       setReplyInput('');
       setReplyingTo(null);
       setReplyTargetNick(null);

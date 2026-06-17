@@ -635,22 +635,7 @@ app.get('/api/portfolios/:id/comments', async (req, res) => {
       const dislikedIds = new Set(disliked.rows.map(r => r.comment_id));
       rows = rows.map(c => ({ ...c, user_liked: likedIds.has(c.id), user_disliked: dislikedIds.has(c.id) }));
     }
-    // 부모 댓글과 대댓글을 트리 구조로 조합
-    const parentMap = {};
-    const topLevel = [];
-    for (const row of rows) {
-      row.replies = [];
-      parentMap[row.id] = row;
-    }
-    for (const row of rows) {
-      if (row.parent_id) {
-        const parent = parentMap[row.parent_id];
-        if (parent) parent.replies.push(row);
-      } else {
-        topLevel.push(row);
-      }
-    }
-    res.json({ success: true, comments: topLevel });
+    res.json({ success: true, comments: rows });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: '댓글 조회 오류.' });
