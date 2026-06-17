@@ -74,6 +74,7 @@ const App = () => {
   const [sliderIndex, setSliderIndex] = useState(0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
   const [sort, setSort] = useState<'latest' | 'likes' | 'views'>('latest');
   const [editPortfolio, setEditPortfolio] = useState<Project | null>(null);
 
@@ -105,8 +106,8 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (navTab === 'home') fetchPortfolios(tab, sort);
-  }, [navTab, tab, sort, refreshTrigger, fetchPortfolios]);
+    if (navTab === 'home') fetchPortfolios(tab, sort, activeSearch);
+  }, [navTab, tab, sort, refreshTrigger, activeSearch, fetchPortfolios]);
 
   // URL이 /portfolio/가 아니면 selectedProject 초기화
   useEffect(() => {
@@ -231,12 +232,12 @@ const App = () => {
         <SearchRow>
           <SearchInput
             type="text"
-            placeholder="제목, 기술 스택, 팀원 이름으로 검색..."
+            placeholder="제목, 카테고리, 닉네임으로 검색..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') fetchPortfolios(tab, sort, searchQuery); }}
+            onKeyDown={e => { if (e.key === 'Enter') { setActiveSearch(searchQuery); fetchPortfolios(tab, sort, searchQuery); } }}
           />
-          <SearchBtn onClick={() => fetchPortfolios(tab, sort, searchQuery)}>검색</SearchBtn>
+          <SearchBtn onClick={() => { setActiveSearch(searchQuery); fetchPortfolios(tab, sort, searchQuery); }}>검색</SearchBtn>
         </SearchRow>
 
         <ControlRow>
@@ -247,7 +248,7 @@ const App = () => {
           </Nav>
           <SortRow>
             {([['latest','최신순'], ['likes','좋아요순'], ['views','조회순']] as const).map(([key, label]) => (
-              <SortBtn key={key} $active={sort === key} onClick={() => { setSort(key); fetchPortfolios(tab, key, searchQuery); }}>{label}</SortBtn>
+              <SortBtn key={key} $active={sort === key} onClick={() => { setSort(key); fetchPortfolios(tab, key, activeSearch); }}>{label}</SortBtn>
             ))}
           </SortRow>
         </ControlRow>
@@ -256,7 +257,7 @@ const App = () => {
           {loading ? (
             <LoadingText>불러오는 중...</LoadingText>
           ) : portfolios.length === 0 ? (
-            <EmptyText>등록된 포트폴리오가 없어요.</EmptyText>
+            <EmptyText>{activeSearch ? `"${activeSearch}"에 해당하는 포트폴리오가 없어요.` : "등록된 포트폴리오가 없어요."}</EmptyText>
           ) : (
             portfolios.map(item => (
               <GridItem key={item.id} onDoubleClick={async () => {
