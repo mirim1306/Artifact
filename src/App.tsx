@@ -232,7 +232,7 @@ const App = () => {
         <SearchRow>
           <SearchInput
             type="text"
-            placeholder="제목, 카테고리, 닉네임으로 검색..."
+            placeholder="제목, 카테고리, 닉네임"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { setActiveSearch(searchQuery); fetchPortfolios(tab, sort, searchQuery); } }}

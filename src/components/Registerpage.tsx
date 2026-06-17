@@ -28,7 +28,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
   const [existingMediaUrls, setExistingMediaUrls] = useState<string[]>([]);
   const [subCategories, setSubCategories] = useState<string[]>([]);
   const [customCategory, setCustomCategory] = useState('');
-  const [customSubCategory, setCustomSubCategory] = useState('');
+  const [customSubCategories, setCustomSubCategories] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
   const [form, setForm] = useState({
@@ -83,16 +83,11 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
         const parsed: string[] = typeof editData.sub_categories === 'string'
           ? editData.sub_categories.split(',').filter(Boolean)
           : (editData.sub_categories || []);
-        // 파싱된 추가 카테고리 중 미리 정의되지 않은 값은 '기타'로 표시하고 customSubCategory에 저장
-        const knownSubs = ['웹', '앱', '게임', '디자인', '기타'];
-        const customSub = parsed.find(s => !knownSubs.includes(s));
-        if (customSub) {
-          setCustomSubCategory(customSub);
-          // 커스텀 값을 '기타'로 교체
-          setSubCategories(parsed.map(s => !knownSubs.includes(s) ? '기타' : s));
-        } else {
-          setSubCategories(parsed);
-        }
+        const knownSubs = ['웹', '앱', '게임', '디자인'];
+        const standardSubs = parsed.filter(s => knownSubs.includes(s));
+        const customSubs = parsed.filter(s => !knownSubs.includes(s));
+        setSubCategories(standardSubs);
+        if (customSubs.length > 0) setCustomSubCategories(customSubs);
       }
       if (editData.main_image) {
         const url = editData.main_image.startsWith('http')
@@ -139,7 +134,10 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
     const finalCategory = form.category === '기타' && customCategory.trim()
       ? customCategory.trim() : form.category;
     formData.set('category', finalCategory);
-    const finalSubs = subCategories.map(s => s === '기타' && customSubCategory.trim() ? customSubCategory.trim() : s);
+    const finalSubs = [
+      ...subCategories,
+      ...customSubCategories.map(s => s.trim()).filter(s => s),
+    ];
     if (finalSubs.length > 0) formData.append('sub_categories', finalSubs.join(','));
     if (mainImageFile) formData.append('main_image', mainImageFile);
     // 유지할 기존 이미지 URL 전달 (X로 삭제한 건 제외됨)
@@ -178,8 +176,10 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
             <Col>
               <Label>카테고리 <Required>*</Required></Label>
               <Select name="category" value={form.category} onChange={e => {
-                setForm({ ...form, category: e.target.value as Category });
-                setSubCategories([]);
+                const newCat = e.target.value as Category;
+                const newOpts = SUB_CATEGORY_OPTIONS[newCat].filter(o => o !== '기타');
+                setForm({ ...form, category: newCat });
+                setSubCategories(prev => prev.filter(s => newOpts.includes(s)));
                 setCustomCategory('');
               }}>
                 <option value="웹">웹</option>
@@ -214,30 +214,38 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
 
           <Label>추가 카테고리 <Hint>(해당되는 항목 선택, 복수 선택 가능)</Hint></Label>
           <SubCategoryRow>
-            {SUB_CATEGORY_OPTIONS[form.category].map(cat => (
+            {SUB_CATEGORY_OPTIONS[form.category].filter(cat => cat !== '기타').map(cat => (
               <SubCategoryChip
                 key={cat}
                 type="button"
-                $active={subCategories.includes(cat) || (cat === '기타' && !!customSubCategory)}
-                onClick={() => {
-                  if (cat === '기타') {
-                    setSubCategories(prev => prev.includes('기타') ? prev.filter(c => c !== '기타') : [...prev, '기타']);
-                  } else {
-                    setSubCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
-                  }
-                }}
+                $active={subCategories.includes(cat)}
+                onClick={() => setSubCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat])}
               >
                 {cat}
               </SubCategoryChip>
             ))}
+            <SubCategoryChip
+              type="button"
+              $active={customSubCategories.length > 0}
+              onClick={() => setCustomSubCategories(prev => [...prev, ''])}
+            >
+              기타 +
+            </SubCategoryChip>
           </SubCategoryRow>
-          {subCategories.includes('기타') && (
-            <Input
-              placeholder="추가 카테고리 직접 입력..."
-              value={customSubCategory}
-              onChange={e => setCustomSubCategory(e.target.value)}
-            />
-          )}
+          {customSubCategories.map((val, idx) => (
+            <CustomSubRow key={idx}>
+              <Input
+                placeholder="기타 카테고리 직접 입력..."
+                value={val}
+                onChange={e => {
+                  const updated = [...customSubCategories];
+                  updated[idx] = e.target.value;
+                  setCustomSubCategories(updated);
+                }}
+              />
+              <RemoveCustomBtn type="button" onClick={() => setCustomSubCategories(prev => prev.filter((_, i) => i !== idx))}>×</RemoveCustomBtn>
+            </CustomSubRow>
+          ))}
 
           <Label>메인 이미지</Label>
           <ImageUploadBox
@@ -472,4 +480,11 @@ const SubCategoryChip = styled.button<{ $active: boolean }>`
   background: ${p => p.$active ? 'rgba(123,44,191,0.3)' : 'transparent'};
   color: ${p => p.$active ? '#d8b4fe' : 'rgba(255,255,255,0.5)'};
   &:hover { border-color: #7b2cbf; color: #d8b4fe; }
+`;
+const CustomSubRow = styled.div` display: flex; gap: 8px; align-items: center; `;
+const RemoveCustomBtn = styled.button`
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; border: none;
+  background: rgba(255,100,100,0.2); color: #ff6b6b; font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  &:hover { background: rgba(255,100,100,0.4); }
 `;
