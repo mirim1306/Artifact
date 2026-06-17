@@ -78,7 +78,9 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
         design_link: editData.design_link || '',
         comments_enabled: editData.comments_enabled === false ? 'false' : 'true', // null/undefined이면 'true'
       });
-      // 추가 카테고리 복원: '기타'가 아닌 커스텀 값이 있으면 '기타'로 치환하고 customSubCategory에 저장
+      // 추가 카테고리 복원
+      setSubCategories([]);
+      setCustomSubCategories([]);
       if (editData.sub_categories) {
         const parsed: string[] = typeof editData.sub_categories === 'string'
           ? editData.sub_categories.split(',').filter(Boolean)
@@ -177,7 +179,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
               <Label>카테고리 <Required>*</Required></Label>
               <Select name="category" value={form.category} onChange={e => {
                 const newCat = e.target.value as Category;
-                const newOpts = SUB_CATEGORY_OPTIONS[newCat].filter(o => o !== '기타');
+                const newOpts = (SUB_CATEGORY_OPTIONS[newCat] ?? []).filter(o => o !== '기타');
                 setForm({ ...form, category: newCat });
                 setSubCategories(prev => prev.filter(s => newOpts.includes(s)));
                 setCustomCategory('');
@@ -214,7 +216,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
 
           <Label>추가 카테고리 <Hint>(해당되는 항목 선택, 복수 선택 가능)</Hint></Label>
           <SubCategoryRow>
-            {SUB_CATEGORY_OPTIONS[form.category].filter(cat => cat !== '기타').map(cat => (
+            {(SUB_CATEGORY_OPTIONS[form.category] ?? []).filter(cat => cat !== '기타').map(cat => (
               <SubCategoryChip
                 key={cat}
                 type="button"
@@ -232,7 +234,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
               기타 +
             </SubCategoryChip>
           </SubCategoryRow>
-          {customSubCategories.map((val, idx) => (
+          {(customSubCategories ?? []).map((val, idx) => (
             <CustomSubRow key={idx}>
               <Input
                 placeholder="기타 카테고리 직접 입력..."
