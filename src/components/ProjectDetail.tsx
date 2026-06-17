@@ -31,6 +31,7 @@ interface Project {
   service_intro?: string; main_features?: string; detail_desc?: string;
   run_link?: string; file_link?: string; store_link?: string; github_link?: string;
   tech_environment?: string; team_members?: string; dev_period?: string; design_tool?: string;
+  design_link?: string; sub_categories?: string;
   nickname?: string; username?: string; email?: string; user_bio?: string;
   comments?: Comment[]; like_count?: number; view_count?: number; comments_enabled?: boolean;
 }
@@ -257,6 +258,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
           </RunButton>
 
           <MetaInfo>
+            {project.sub_categories && <MetaItem><MetaLabel>추가 카테고리</MetaLabel><MetaValue>{project.sub_categories.split(',').filter(Boolean).join(' · ')}</MetaValue></MetaItem>}
             {project.dev_period && <MetaItem><MetaLabel>개발 기간</MetaLabel><MetaValue>{project.dev_period}</MetaValue></MetaItem>}
             {project.team_members && <MetaItem><MetaLabel>팀원</MetaLabel><MetaValue>{project.team_members}</MetaValue></MetaItem>}
             {project.tech_environment && <MetaItem><MetaLabel>기술 스택 / 환경</MetaLabel><MetaValue>{project.tech_environment}</MetaValue></MetaItem>}
@@ -268,6 +270,9 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
                 {project.file_link && <MetaItem><MetaLabel>실행 파일 다운로드</MetaLabel><MetaValue><a href={project.file_link}>{project.file_link}</a></MetaValue></MetaItem>}
                 {project.run_link && <MetaItem><MetaLabel>웹 게임 링크</MetaLabel><MetaValue><a href={project.run_link} target="_blank" rel="noreferrer">{project.run_link}</a></MetaValue></MetaItem>}
               </>
+            )}
+            {project.category === '디자인' && project.design_link && (
+              <MetaItem><MetaLabel>디자인 링크</MetaLabel><MetaValue><a href={project.design_link} target="_blank" rel="noreferrer">{project.design_link}</a></MetaValue></MetaItem>
             )}
             {project.github_link && <MetaItem><MetaLabel>GitHub</MetaLabel><MetaValue><a href={project.github_link} target="_blank" rel="noreferrer">{project.github_link}</a></MetaValue></MetaItem>}
             {project.main_features && <MetaItem><MetaLabel>주요 기능</MetaLabel><MetaValueBox>{project.main_features}</MetaValueBox></MetaItem>}
