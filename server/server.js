@@ -18,6 +18,36 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
+// ══════════════════════════════════════════════════════════════
+// SSE (Server-Sent Events) 인프라
+// ══════════════════════════════════════════════════════════════
+const sseClients = new Map();
+
+function sseBroadcast(channel, event) {
+  const clients = sseClients.get(channel);
+  if (clients) clients.forEach(r => r.write(`data: ${JSON.stringify(event)}\n\n`));
+}
+
+app.get('/api/sse/:channel', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  res.write('data: {"type":"connected"}\n\n');
+
+  const { channel } = req.params;
+  if (!sseClients.has(channel)) sseClients.set(channel, new Set());
+  sseClients.get(channel).add(res);
+
+  const heartbeat = setInterval(() => res.write(': ping\n\n'), 25000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    const s = sseClients.get(channel);
+    if (s) { s.delete(res); if (s.size === 0) sseClients.delete(channel); }
+  });
+});
+
 const uploadDir = path.join(__dirname, 'uploads');
 app.use('/uploads', express.static(uploadDir));
 
@@ -423,6 +453,7 @@ app.post('/api/portfolios', authMiddleware, upload.fields([
     }
 
     res.status(201).json({ success: true, message: '포트폴리오가 등록되었습니다!', portfolio: result.rows[0] });
+    sseBroadcast('portfolios', { type: 'portfolios' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
@@ -509,6 +540,7 @@ app.put('/api/portfolios/:id', authMiddleware, upload.fields([
     }
 
     res.json({ success: true, message: '포트폴리오가 수정되었습니다!', portfolio: result.rows[0] });
+    sseBroadcast('portfolios', { type: 'portfolios' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
@@ -547,6 +579,7 @@ app.delete('/api/portfolios/:id', authMiddleware, async (req, res) => {
 
     await pool.query('DELETE FROM portfolios WHERE id = $1', [req.params.id]);
     res.json({ success: true, message: '포트폴리오가 삭제되었습니다.' });
+    sseBroadcast('portfolios', { type: 'portfolios' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: '서버 오류가 발생했습니다.' });
@@ -661,6 +694,7 @@ app.post('/api/portfolios/:id/comments', authMiddleware, async (req, res) => {
       WHERE c.id = $1
     `, [result.rows[0].id]);
     res.status(201).json({ success: true, comment: { ...comment.rows[0], replies: [] } });
+    sseBroadcast(`comments-${req.params.id}`, { type: 'comments' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: '댓글 등록 오류.' });
@@ -669,13 +703,15 @@ app.post('/api/portfolios/:id/comments', authMiddleware, async (req, res) => {
 
 app.delete('/api/comments/:id', authMiddleware, async (req, res) => {
   try {
-    const check = await pool.query('SELECT user_id FROM portfolio_comments WHERE id = $1', [req.params.id]);
+    const check = await pool.query('SELECT user_id, portfolio_id FROM portfolio_comments WHERE id = $1', [req.params.id]);
     if (check.rows.length === 0)
       return res.status(404).json({ success: false, message: '댓글을 찾을 수 없습니다.' });
     if (check.rows[0].user_id !== req.user.id)
       return res.status(403).json({ success: false, message: '삭제 권한이 없습니다.' });
+    const portfolioId = check.rows[0].portfolio_id;
     await pool.query('DELETE FROM portfolio_comments WHERE id = $1', [req.params.id]);
     res.json({ success: true });
+    sseBroadcast(`comments-${portfolioId}`, { type: 'comments' });
   } catch {
     res.status(500).json({ success: false, message: '댓글 삭제 오류.' });
   }
@@ -750,6 +786,7 @@ app.delete('/api/admin/portfolios/:id', adminMiddleware, async (req, res) => {
 
     await pool.query('DELETE FROM portfolios WHERE id = $1', [req.params.id]);
     res.json({ success: true, message: '포트폴리오가 삭제되었습니다.' });
+    sseBroadcast('portfolios', { type: 'portfolios' });
   } catch (err) {
     res.status(500).json({ success: false, message: '포트폴리오 삭제 오류' });
   }
@@ -774,8 +811,11 @@ app.get('/api/admin/comments', adminMiddleware, async (req, res) => {
 // 관리자 댓글 강제 삭제
 app.delete('/api/admin/comments/:id', adminMiddleware, async (req, res) => {
   try {
+    const row = await pool.query('SELECT portfolio_id FROM portfolio_comments WHERE id = $1', [req.params.id]);
+    const portfolioId = row.rows[0]?.portfolio_id;
     await pool.query('DELETE FROM portfolio_comments WHERE id = $1', [req.params.id]);
     res.json({ success: true, message: '댓글이 삭제되었습니다.' });
+    if (portfolioId) sseBroadcast(`comments-${portfolioId}`, { type: 'comments' });
   } catch (err) {
     res.status(500).json({ success: false, message: '댓글 삭제 오류' });
   }
@@ -821,11 +861,13 @@ app.put('/api/comments/:id', authMiddleware, async (req, res) => {
   const { content } = req.body;
   if (!content || !content.trim()) return res.status(400).json({ success: false, message: '내용을 입력해주세요.' });
   try {
-    const check = await pool.query('SELECT user_id FROM portfolio_comments WHERE id = $1', [req.params.id]);
+    const check = await pool.query('SELECT user_id, portfolio_id FROM portfolio_comments WHERE id = $1', [req.params.id]);
     if (!check.rows.length) return res.status(404).json({ success: false });
     if (check.rows[0].user_id !== req.user.id) return res.status(403).json({ success: false, message: '수정 권한이 없습니다.' });
+    const portfolioId = check.rows[0].portfolio_id;
     await pool.query('UPDATE portfolio_comments SET content = $1 WHERE id = $2', [content.trim(), req.params.id]);
     res.json({ success: true });
+    sseBroadcast(`comments-${portfolioId}`, { type: 'comments' });
   } catch (err) { res.status(500).json({ success: false }); }
 });
 
@@ -835,6 +877,8 @@ app.put('/api/comments/:id', authMiddleware, async (req, res) => {
 
 app.post('/api/comments/:id/like', authMiddleware, async (req, res) => {
   try {
+    const commentRow = await pool.query('SELECT portfolio_id FROM portfolio_comments WHERE id = $1', [req.params.id]);
+    const portfolioId = commentRow.rows[0]?.portfolio_id;
     const existing = await pool.query('SELECT id FROM comment_likes WHERE comment_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
     if (existing.rows.length > 0) {
       await pool.query('DELETE FROM comment_likes WHERE comment_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
@@ -845,11 +889,14 @@ app.post('/api/comments/:id/like', authMiddleware, async (req, res) => {
     const likes = await pool.query('SELECT COUNT(*) FROM comment_likes WHERE comment_id = $1', [req.params.id]);
     const dislikes = await pool.query('SELECT COUNT(*) FROM comment_dislikes WHERE comment_id = $1', [req.params.id]);
     res.json({ success: true, liked: existing.rows.length === 0, likeCount: parseInt(likes.rows[0].count), dislikeCount: parseInt(dislikes.rows[0].count) });
+    if (portfolioId) sseBroadcast(`comments-${portfolioId}`, { type: 'comments' });
   } catch (err) { res.status(500).json({ success: false }); }
 });
 
 app.post('/api/comments/:id/dislike', authMiddleware, async (req, res) => {
   try {
+    const commentRow = await pool.query('SELECT portfolio_id FROM portfolio_comments WHERE id = $1', [req.params.id]);
+    const portfolioId = commentRow.rows[0]?.portfolio_id;
     const existing = await pool.query('SELECT id FROM comment_dislikes WHERE comment_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
     if (existing.rows.length > 0) {
       await pool.query('DELETE FROM comment_dislikes WHERE comment_id = $1 AND user_id = $2', [req.params.id, req.user.id]);
@@ -860,6 +907,7 @@ app.post('/api/comments/:id/dislike', authMiddleware, async (req, res) => {
     const dislikes = await pool.query('SELECT COUNT(*) FROM comment_dislikes WHERE comment_id = $1', [req.params.id]);
     const likes = await pool.query('SELECT COUNT(*) FROM comment_likes WHERE comment_id = $1', [req.params.id]);
     res.json({ success: true, disliked: existing.rows.length === 0, dislikeCount: parseInt(dislikes.rows[0].count), likeCount: parseInt(likes.rows[0].count) });
+    if (portfolioId) sseBroadcast(`comments-${portfolioId}`, { type: 'comments' });
   } catch (err) { res.status(500).json({ success: false }); }
 });
 

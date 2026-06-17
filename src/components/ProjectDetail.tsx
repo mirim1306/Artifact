@@ -101,8 +101,18 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
       if (res.success) { setDisliked(res.disliked); setDislikeCount(res.count); }
     });
     fetchComments();
-    const id = setInterval(fetchComments, 10000);
-    return () => clearInterval(id);
+
+    const es = new EventSource(`/api/sse/comments-${project.id}`);
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type === 'comments') fetchComments();
+      } catch {}
+    };
+    // SSE 연결 실패 시 폴백 폴링
+    const fallback = setInterval(fetchComments, 60000);
+
+    return () => { es.close(); clearInterval(fallback); };
   }, [project.id, fetchComments]);
 
   const handleLike = async () => {

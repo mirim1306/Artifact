@@ -109,13 +109,21 @@ const App = () => {
     if (navTab === 'home') fetchPortfolios(tab, sort, activeSearch);
   }, [navTab, tab, sort, refreshTrigger, activeSearch, fetchPortfolios]);
 
-  // 포트폴리오 목록 30초 폴링 (홈 화면, 상세 미열람 중일 때)
+  // 포트폴리오 목록 실시간 업데이트 (홈 화면, 상세 미열람 중일 때)
   useEffect(() => {
     if (navTab !== 'home' || selectedProject) return;
-    const id = setInterval(() => {
-      fetchPortfolios(tab, sort, activeSearch);
-    }, 30000);
-    return () => clearInterval(id);
+
+    const es = new EventSource('/api/sse/portfolios');
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type === 'portfolios') fetchPortfolios(tab, sort, activeSearch);
+      } catch {}
+    };
+    // SSE 연결 실패 시 폴백 폴링
+    const fallback = setInterval(() => fetchPortfolios(tab, sort, activeSearch), 60000);
+
+    return () => { es.close(); clearInterval(fallback); };
   }, [navTab, tab, sort, activeSearch, selectedProject, fetchPortfolios]);
 
   // URL이 /portfolio/가 아니면 selectedProject 초기화
