@@ -76,7 +76,10 @@ const App = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSearch, setActiveSearch] = useState('');
   const [sort, setSort] = useState<'latest' | 'likes' | 'views'>('latest');
+  const [sortOpen, setSortOpen] = useState(false);
   const [editPortfolio, setEditPortfolio] = useState<Project | null>(null);
+
+  const sortLabels = { latest: '최신순', likes: '좋아요순', views: '조회순' } as const;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -108,6 +111,13 @@ const App = () => {
   useEffect(() => {
     if (navTab === 'home') fetchPortfolios(tab, sort, activeSearch);
   }, [navTab, tab, sort, refreshTrigger, activeSearch, fetchPortfolios]);
+
+  useEffect(() => {
+    if (!sortOpen) return;
+    const close = () => setSortOpen(false);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [sortOpen]);
 
   // 포트폴리오 목록 실시간 업데이트 (홈 화면, 상세 미열람 중일 때)
   useEffect(() => {
@@ -263,11 +273,20 @@ const App = () => {
             <TabButton key={c} $active={tab === c} onClick={() => handleTabChange(c)}>{c}</TabButton>
           ))}
           </Nav>
-          <SortRow>
-            {([['latest','최신순'], ['likes','좋아요순'], ['views','조회순']] as const).map(([key, label]) => (
-              <SortBtn key={key} $active={sort === key} onClick={() => { setSort(key); fetchPortfolios(tab, key, activeSearch); }}>{label}</SortBtn>
-            ))}
-          </SortRow>
+          <SortDropdown>
+            <SortSelectedBtn onClick={(e: React.MouseEvent) => { e.stopPropagation(); setSortOpen(o => !o); }}>
+              {sortLabels[sort]} <SortChevron $open={sortOpen}>∨</SortChevron>
+            </SortSelectedBtn>
+            {sortOpen && (
+              <SortOptionList>
+                {(['latest', 'likes', 'views'] as const).filter(k => k !== sort).map(key => (
+                  <SortOptionItem key={key} onClick={() => { setSort(key); fetchPortfolios(tab, key, activeSearch); setSortOpen(false); }}>
+                    {sortLabels[key]}
+                  </SortOptionItem>
+                ))}
+              </SortOptionList>
+            )}
+          </SortDropdown>
         </ControlRow>
 
         <GridMain>
@@ -505,12 +524,25 @@ const SearchBtn = styled.button`
   &:hover { background: #9187d8; }
 `;
 const ControlRow = styled.div` display: flex; justify-content: space-between; align-items: center; padding: 0 60px; margin: 20px 0; `;
-const SortRow = styled.div` display: flex; gap: 8px; `;
-const SortBtn = styled.button<{ $active: boolean }>`
-  padding: 10px 20px; border-radius: 50px; font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid transparent;
-  background: ${p => p.$active ? '#7c6fcd' : 'rgba(255,255,255,0.07)'};
-  color: ${p => p.$active ? 'white' : 'rgba(255,255,255,0.5)'};
-  &:hover { background: ${p => p.$active ? '#7c6fcd' : 'rgba(255,255,255,0.12)'}; color: white; }
+const SortDropdown = styled.div` position: relative; `;
+const SortSelectedBtn = styled.button`
+  display: flex; align-items: center; gap: 8px; justify-content: center;
+  padding: 10px 22px; border-radius: 50px; font-size: 13px; font-weight: 700;
+  background: #7c6fcd; border: none; color: white; cursor: pointer; min-width: 110px;
+  &:hover { background: #9187d8; }
+`;
+const SortChevron = styled.span<{ $open: boolean }>`
+  display: inline-block; transition: transform 0.2s;
+  transform: ${p => p.$open ? 'rotate(180deg)' : 'rotate(0deg)'};
+`;
+const SortOptionList = styled.div`
+  position: absolute; top: calc(100% + 6px); right: 0;
+  display: flex; flex-direction: column; gap: 6px; z-index: 200;
+`;
+const SortOptionItem = styled.button`
+  padding: 10px 22px; border-radius: 50px; font-size: 13px; font-weight: 700; min-width: 110px;
+  background: #1c2035; border: none; color: white; cursor: pointer;
+  &:hover { background: #252a45; }
 `;
 
 /* ── 푸터 ── */

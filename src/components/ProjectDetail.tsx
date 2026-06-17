@@ -563,7 +563,7 @@ const CommentInputRow = styled.div`
 const CommentInput = styled.textarea`
   flex: 1; padding: 10px 0; border: none;
   background: transparent; color: white; font-size: 14px; resize: none; height: 40px;
-  outline: none; font-family: inherit; line-height: 1.5;
+  outline: none; font-family: inherit; line-height: 1.5; overflow: hidden;
   &::placeholder { color: rgba(255,255,255,0.28); }
   &:disabled { opacity: 0.4; }
 `;
