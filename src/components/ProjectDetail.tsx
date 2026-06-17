@@ -119,9 +119,19 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
     }
   };
 
-  const handleDeleteComment = async (id: number) => {
+  const handleDeleteComment = async (id: number, parentId?: number) => {
     const res = await commentAPI.delete(id);
-    if (res.success) setComments(comments.filter(c => c.id !== id));
+    if (res.success) {
+      if (parentId) {
+        // 대댓글 삭제
+        setComments(prev => prev.map(c =>
+          c.id === parentId ? { ...c, replies: (c.replies || []).filter(r => r.id !== id) } : c
+        ));
+      } else {
+        // 댓글 삭제
+        setComments(prev => prev.filter(c => c.id !== id));
+      }
+    }
   };
 
   const handleEditStart = (c: Comment) => {
@@ -129,34 +139,46 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
     setEditingContent(c.content);
   };
 
-  const handleEditSave = async (id: number) => {
+  const handleEditSave = async (id: number, parentId?: number) => {
     if (!editingContent.trim()) return;
     const res = await commentAPI.update(id, editingContent);
     if (res.success) {
-      setComments(comments.map(c => c.id === id ? { ...c, content: editingContent } : c));
+      if (parentId) {
+        setComments(prev => prev.map(c =>
+          c.id === parentId
+            ? { ...c, replies: (c.replies || []).map(r => r.id === id ? { ...r, content: editingContent } : r) }
+            : c
+        ));
+      } else {
+        setComments(prev => prev.map(c => c.id === id ? { ...c, content: editingContent } : c));
+      }
       setEditingCommentId(null);
     }
   };
 
-  const handleCommentLike = async (id: number) => {
+  const handleCommentLike = async (id: number, parentId?: number) => {
     if (!currentUserId) return;
     const res = await commentAPI.like(id);
     if (res.success) {
-      setComments(comments.map(c => c.id === id
-        ? { ...c, user_liked: res.liked, user_disliked: false, like_count: res.likeCount, dislike_count: res.dislikeCount }
-        : c
-      ));
+      const updateComment = (c: Comment): Comment => {
+        if (c.id === id) return { ...c, user_liked: res.liked, user_disliked: false, like_count: res.likeCount, dislike_count: res.dislikeCount };
+        if (parentId && c.id === parentId) return { ...c, replies: (c.replies || []).map(r => r.id === id ? { ...r, user_liked: res.liked, user_disliked: false, like_count: res.likeCount, dislike_count: res.dislikeCount } : r) };
+        return c;
+      };
+      setComments(prev => prev.map(updateComment));
     }
   };
 
-  const handleCommentDislike = async (id: number) => {
+  const handleCommentDislike = async (id: number, parentId?: number) => {
     if (!currentUserId) return;
     const res = await commentAPI.dislike(id);
     if (res.success) {
-      setComments(comments.map(c => c.id === id
-        ? { ...c, user_liked: false, user_disliked: res.disliked, like_count: res.likeCount, dislike_count: res.dislikeCount }
-        : c
-      ));
+      const updateComment = (c: Comment): Comment => {
+        if (c.id === id) return { ...c, user_liked: false, user_disliked: res.disliked, like_count: res.likeCount, dislike_count: res.dislikeCount };
+        if (parentId && c.id === parentId) return { ...c, replies: (c.replies || []).map(r => r.id === id ? { ...r, user_liked: false, user_disliked: res.disliked, like_count: res.likeCount, dislike_count: res.dislikeCount } : r) };
+        return c;
+      };
+      setComments(prev => prev.map(updateComment));
     }
   };
 
@@ -375,15 +397,39 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
                           <span className="nick">↳ {r.nickname}</span>
                           <span className="date">{new Date(r.created_at).toLocaleDateString('ko-KR')}</span>
                           {currentUserId === r.user_id && (
-                            <DeleteCommentBtn onClick={async () => {
-                              const res = await commentAPI.delete(r.id);
-                              if (res.success) setComments(prev => prev.map(cc =>
-                                cc.id === c.id ? { ...cc, replies: (cc.replies || []).filter(rr => rr.id !== r.id) } : cc
-                              ));
-                            }}>삭제</DeleteCommentBtn>
+                            <>
+                              {editingCommentId === r.id ? (
+                                <>
+                                  <CommentActionBtn onClick={() => handleEditSave(r.id, c.id)}>저장</CommentActionBtn>
+                                  <CommentActionBtn onClick={() => setEditingCommentId(null)}>취소</CommentActionBtn>
+                                </>
+                              ) : (
+                                <>
+                                  <CommentActionBtn onClick={() => { setEditingCommentId(r.id); setEditingContent(r.content); }}>수정</CommentActionBtn>
+                                  <DeleteCommentBtn onClick={() => handleDeleteComment(r.id, c.id)}>삭제</DeleteCommentBtn>
+                                </>
+                              )}
+                            </>
                           )}
                         </CommentMeta>
-                        <CommentContent>{r.content}</CommentContent>
+                        {editingCommentId === r.id ? (
+                          <CommentEditInput
+                            value={editingContent}
+                            onChange={e => setEditingContent(e.target.value)}
+                            autoFocus
+                          />
+                        ) : (
+                          <CommentContent>{r.content}</CommentContent>
+                        )}
+                        {/* 대댓글 좋아요/싫어요 */}
+                        <CommentReactionRow>
+                          <CommentReactionBtn $active={!!r.user_liked} $color="#ff2d55" onClick={() => handleCommentLike(r.id, c.id)} disabled={!currentUserId}>
+                            {r.user_liked ? '❤️' : '🤍'} {r.like_count || 0}
+                          </CommentReactionBtn>
+                          <CommentReactionBtn $active={!!r.user_disliked} $color="#6c757d" onClick={() => handleCommentDislike(r.id, c.id)} disabled={!currentUserId}>
+                            👎 {r.dislike_count || 0}
+                          </CommentReactionBtn>
+                        </CommentReactionRow>
                       </ReplyItem>
                     ))}
                   </ReplyList>

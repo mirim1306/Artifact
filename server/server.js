@@ -153,8 +153,11 @@ async function initDB() {
       portfolio_id INTEGER NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       content TEXT NOT NULL,
+      parent_id INTEGER REFERENCES portfolio_comments(id) ON DELETE CASCADE,
       created_at TIMESTAMP DEFAULT NOW()
     );
+    -- parent_id 컬럼 없으면 추가 (기존 DB 마이그레이션)
+    ALTER TABLE portfolio_comments ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES portfolio_comments(id) ON DELETE CASCADE;
 
     CREATE TABLE IF NOT EXISTS portfolio_tags (
       id SERIAL PRIMARY KEY,
@@ -274,7 +277,7 @@ app.get('/api/portfolios', optionalAuth, async (req, res) => {
     }
     if (search) {
       params.push(`%${search}%`);
-      query += ` AND (p.title ILIKE $${params.length} OR p.category ILIKE $${params.length} OR p.sub_categories ILIKE $${params.length} OR u.nickname ILIKE $${params.length} OR p.tech_environment ILIKE $${params.length} OR p.team_members ILIKE $${params.length} OR p.service_intro ILIKE $${params.length})`;
+      query += ` AND (p.title ILIKE $${params.length} OR p.category ILIKE $${params.length} OR p.sub_categories ILIKE $${params.length} OR p.tech_environment ILIKE $${params.length} OR p.team_members ILIKE $${params.length} OR p.service_intro ILIKE $${params.length})`;
     }
 
     query += ' GROUP BY p.id, u.nickname';
@@ -619,41 +622,59 @@ app.get('/api/portfolios/:id/comments', async (req, res) => {
       FROM portfolio_comments c
       JOIN users u ON c.user_id = u.id
       WHERE c.portfolio_id = $1
-      ORDER BY c.created_at DESC
+      ORDER BY COALESCE(c.parent_id, c.id), c.parent_id NULLS FIRST, c.created_at ASC
     `, [req.params.id]);
-    let comments = result.rows;
+    let rows = result.rows;
     if (currentUserId) {
       const liked = await pool.query('SELECT comment_id FROM comment_likes WHERE user_id = $1', [currentUserId]);
       const disliked = await pool.query('SELECT comment_id FROM comment_dislikes WHERE user_id = $1', [currentUserId]);
       const likedIds = new Set(liked.rows.map(r => r.comment_id));
       const dislikedIds = new Set(disliked.rows.map(r => r.comment_id));
-      comments = comments.map(c => ({ ...c, user_liked: likedIds.has(c.id), user_disliked: dislikedIds.has(c.id) }));
+      rows = rows.map(c => ({ ...c, user_liked: likedIds.has(c.id), user_disliked: dislikedIds.has(c.id) }));
     }
-    res.json({ success: true, comments });
-  } catch {
+    // 부모 댓글과 대댓글을 트리 구조로 조합
+    const parentMap = {};
+    const topLevel = [];
+    for (const row of rows) {
+      row.replies = [];
+      parentMap[row.id] = row;
+    }
+    for (const row of rows) {
+      if (row.parent_id) {
+        const parent = parentMap[row.parent_id];
+        if (parent) parent.replies.push(row);
+      } else {
+        topLevel.push(row);
+      }
+    }
+    res.json({ success: true, comments: topLevel });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ success: false, message: '댓글 조회 오류.' });
   }
 });
 
 app.post('/api/portfolios/:id/comments', authMiddleware, async (req, res) => {
-  const { content } = req.body;
+  const { content, parent_id } = req.body;
   if (!content?.trim())
     return res.status(400).json({ success: false, message: '댓글 내용을 입력해주세요.' });
   try {
     const result = await pool.query(
-      `INSERT INTO portfolio_comments (portfolio_id, user_id, content)
-       VALUES ($1, $2, $3)
+      `INSERT INTO portfolio_comments (portfolio_id, user_id, content, parent_id)
+       VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [req.params.id, req.user.id, content.trim()]
+      [req.params.id, req.user.id, content.trim(), parent_id || null]
     );
     const comment = await pool.query(`
-      SELECT c.*, u.nickname, u.username
+      SELECT c.*, u.nickname, u.username,
+        0 AS like_count, 0 AS dislike_count
       FROM portfolio_comments c
       JOIN users u ON c.user_id = u.id
       WHERE c.id = $1
     `, [result.rows[0].id]);
-    res.status(201).json({ success: true, comment: comment.rows[0] });
-  } catch {
+    res.status(201).json({ success: true, comment: { ...comment.rows[0], replies: [] } });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ success: false, message: '댓글 등록 오류.' });
   }
 });
