@@ -52,6 +52,15 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
   // 수정 모드면 기존 데이터로 폼 초기화
   useEffect(() => {
     if (editData) {
+      // 메인 카테고리 복원: 기존 값이 미리 정의된 카테고리 목록에 없으면 '기타'로 세팅하고 customCategory에 저장
+      const VALID_CATEGORIES: Category[] = ['웹', '앱', '게임', '디자인', '기타'];
+      const savedCategory = editData.category || '웹';
+      const isCustomCategory = !VALID_CATEGORIES.includes(savedCategory as Category);
+      const resolvedCategory: Category = isCustomCategory ? '기타' : (savedCategory as Category);
+      if (isCustomCategory) {
+        setCustomCategory(savedCategory);
+      }
+
       setForm({
         title: editData.title || '',
         service_intro: editData.service_intro || '',
@@ -61,7 +70,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
         dev_period: editData.dev_period || '',
         github_link: editData.github_link || '',
         is_public: editData.is_public === false ? 'false' : 'true',
-        category: (editData.category as Category) || '웹',
+        category: resolvedCategory,
         run_link: editData.run_link || '',
         file_link: editData.file_link || '',
         store_link: editData.store_link || '',
@@ -69,12 +78,21 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
         design_link: editData.design_link || '',
         comments_enabled: editData.comments_enabled === false ? 'false' : 'true', // null/undefined이면 'true'
       });
-      // 기존 메인 이미지 미리보기
+      // 추가 카테고리 복원: '기타'가 아닌 커스텀 값이 있으면 '기타'로 치환하고 customSubCategory에 저장
       if (editData.sub_categories) {
-        const parsed = typeof editData.sub_categories === 'string'
+        const parsed: string[] = typeof editData.sub_categories === 'string'
           ? editData.sub_categories.split(',').filter(Boolean)
           : (editData.sub_categories || []);
-        setSubCategories(parsed);
+        // 파싱된 추가 카테고리 중 미리 정의되지 않은 값은 '기타'로 표시하고 customSubCategory에 저장
+        const knownSubs = ['웹', '앱', '게임', '디자인', '기타'];
+        const customSub = parsed.find(s => !knownSubs.includes(s));
+        if (customSub) {
+          setCustomSubCategory(customSub);
+          // 커스텀 값을 '기타'로 교체
+          setSubCategories(parsed.map(s => !knownSubs.includes(s) ? '기타' : s));
+        } else {
+          setSubCategories(parsed);
+        }
       }
       if (editData.main_image) {
         const url = editData.main_image.startsWith('http')
