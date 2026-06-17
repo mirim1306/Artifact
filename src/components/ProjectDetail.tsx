@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { likeAPI, commentAPI } from '../Api';
 
@@ -38,6 +38,20 @@ interface Project {
 
 interface ProjectDetailProps { project: Project; onBack: () => void; }
 
+function buildCommentTree(flat: Comment[]): Comment[] {
+  const map: Record<number, Comment> = {};
+  const roots: Comment[] = [];
+  for (const c of flat) map[c.id] = { ...c, replies: [] };
+  for (const c of flat) {
+    if (c.parent_id && map[c.parent_id]) {
+      map[c.parent_id].replies!.push(map[c.id]);
+    } else if (!c.parent_id) {
+      roots.push(map[c.id]);
+    }
+  }
+  return roots;
+}
+
 const getMediaUrl = (url: string): string => {
   if (!url) return '/artifact-logo.png';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
@@ -73,25 +87,11 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
 
   const currentUserId = getCurrentUserId();
 
-  const buildCommentTree = (flat: Comment[]): Comment[] => {
-    const map: Record<number, Comment> = {};
-    const roots: Comment[] = [];
-    for (const c of flat) map[c.id] = { ...c, replies: [] };
-    for (const c of flat) {
-      if (c.parent_id && map[c.parent_id]) {
-        map[c.parent_id].replies!.push(map[c.id]);
-      } else if (!c.parent_id) {
-        roots.push(map[c.id]);
-      }
-    }
-    return roots;
-  };
-
-  const fetchComments = () => {
+  const fetchComments = useCallback(() => {
     commentAPI.getAll(project.id).then(res => {
       if (res.success) setComments(buildCommentTree(res.comments));
     });
-  };
+  }, [project.id]);
 
   useEffect(() => {
     likeAPI.getStatus(project.id).then(res => {
@@ -101,7 +101,9 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
       if (res.success) { setDisliked(res.disliked); setDislikeCount(res.count); }
     });
     fetchComments();
-  }, [project.id]);
+    const id = setInterval(fetchComments, 10000);
+    return () => clearInterval(id);
+  }, [project.id, fetchComments]);
 
   const handleLike = async () => {
     if (!currentUserId) return;
@@ -119,7 +121,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
     if (!currentUserId || !commentInput.trim()) return;
     setCommentLoading(true);
     const res = await commentAPI.create(project.id, commentInput);
-    if (res.success) { setComments([res.comment, ...comments]); setCommentInput(''); }
+    if (res.success) { fetchComments(); setCommentInput(''); }
     setCommentLoading(false);
   };
 

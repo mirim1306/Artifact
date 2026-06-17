@@ -109,6 +109,15 @@ const App = () => {
     if (navTab === 'home') fetchPortfolios(tab, sort, activeSearch);
   }, [navTab, tab, sort, refreshTrigger, activeSearch, fetchPortfolios]);
 
+  // 포트폴리오 목록 30초 폴링 (홈 화면, 상세 미열람 중일 때)
+  useEffect(() => {
+    if (navTab !== 'home' || selectedProject) return;
+    const id = setInterval(() => {
+      fetchPortfolios(tab, sort, activeSearch);
+    }, 30000);
+    return () => clearInterval(id);
+  }, [navTab, tab, sort, activeSearch, selectedProject, fetchPortfolios]);
+
   // URL이 /portfolio/가 아니면 selectedProject 초기화
   useEffect(() => {
     if (!location.pathname.startsWith('/portfolio/')) {
