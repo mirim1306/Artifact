@@ -378,11 +378,11 @@ const PageWrapper = styled.div` width: 100%; min-height: 100vh; display: flex; f
 const TopArea = styled.div` width: 100%; `;
 const Header = styled.div`
   display: grid; grid-template-columns: 1fr auto 1fr;
-  align-items: center; padding: 0 40px; height: 72px;
+  align-items: center; padding: 16px 40px;
   background: rgba(12,15,30,0.85); backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(255,255,255,0.06);
 `;
-const LogoWrapper = styled.div``;
+const LogoWrapper = styled.div` justify-self: start; `;
 const Logo = styled.img` height: 44px; width: auto; object-fit: contain; `;
 const HeaderRight = styled.div` display: flex; align-items: center; gap: 12px; justify-content: flex-end; `;
 const NicknameText = styled.span` font-size: 15px; color: rgba(255,255,255,0.8); font-weight: 600; `;
