@@ -347,6 +347,11 @@ const App = () => {
             <LogoWrapper onClick={handleNavHome} style={{ cursor: 'pointer' }}>
               <Logo src="/artifact-logo.png" alt="ARTIFACT" />
             </LogoWrapper>
+            <NavCenter>
+              <NavItem $active={navTab === 'home' && !selectedProject} onClick={handleNavHome}>홈</NavItem>
+              <NavItem $active={navTab === 'register'} onClick={handleNavRegister}>등록</NavItem>
+              <NavItem $active={navTab === 'mypage'} onClick={handleNavMypage}>마이페이지</NavItem>
+            </NavCenter>
             <HeaderRight>
               {user ? (
                 <>
@@ -359,13 +364,6 @@ const App = () => {
               )}
             </HeaderRight>
           </Header>
-          <NavPanel>
-            <NavPanelInner>
-              <NavItem $active={navTab === 'home' && !selectedProject} onClick={handleNavHome}>홈</NavItem>
-              <NavItem $active={navTab === 'register'} onClick={handleNavRegister}>등록</NavItem>
-              <NavItem $active={navTab === 'mypage'} onClick={handleNavMypage}>마이페이지</NavItem>
-            </NavPanelInner>
-          </NavPanel>
         </TopArea>
         <ContentArea>{renderContent()}</ContentArea>
       </PageWrapper>
@@ -377,16 +375,21 @@ export default App;
 
 /* ── 레이아웃 ── */
 const PageWrapper = styled.div` width: 100%; min-height: 100vh; display: flex; flex-direction: column; `;
-const TopArea = styled.div` width: 100%; padding-bottom: 20px; `;
-const Header = styled.div` display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; `;
+const TopArea = styled.div` width: 100%; `;
+const Header = styled.div`
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center; padding: 0 40px; height: 72px;
+  background: rgba(12,15,30,0.85); backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+`;
 const LogoWrapper = styled.div``;
-const Logo = styled.img` height: 50px; width: auto; object-fit: contain; `;
-const HeaderRight = styled.div` display: flex; align-items: center; gap: 12px; `;
+const Logo = styled.img` height: 44px; width: auto; object-fit: contain; `;
+const HeaderRight = styled.div` display: flex; align-items: center; gap: 12px; justify-content: flex-end; `;
 const NicknameText = styled.span` font-size: 15px; color: rgba(255,255,255,0.8); font-weight: 600; `;
 
 /* ── 헤더 버튼 ── */
 const HeaderButton = styled.button<{ $outline?: boolean }>`
-  padding: 12px 24px; border-radius: 50px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s;
+  padding: 10px 22px; border-radius: 50px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s;
   ${props => props.$outline ? css`
     background: transparent;
     border: 1px solid rgba(159,151,232,0.45);
@@ -400,26 +403,18 @@ const HeaderButton = styled.button<{ $outline?: boolean }>`
   `}
 `;
 
-/* ── 네비게이션 패널 ── */
-const NavPanel = styled.div` display: flex; justify-content: center; padding: 0 40px; margin-top: 10px; `;
-const NavPanelInner = styled.div`
-  display: flex; gap: 10px;
-  background: rgba(20,24,40,0.8);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 50px; padding: 8px;
-`;
+/* ── 네비게이션 ── */
+const NavCenter = styled.nav` display: flex; gap: 48px; align-items: center; justify-content: center; `;
 const NavItem = styled.button<{ $active: boolean }>`
-  padding: 12px 45px; border-radius: 50px; font-size: 16px; font-weight: 700;
-  cursor: pointer; border: none; transition: all 0.3s;
-  ${props => props.$active ? css`
-    background: #7c6fcd;
-    color: #ffffff;
-    box-shadow: 0 4px 12px rgba(124,111,205,0.4);
-  ` : css`
-    background: transparent; color: rgba(255,255,255,0.45);
-    &:hover { background: rgba(255,255,255,0.05); color: white; }
-  `}
+  background: none; border: none; font-size: 16px; font-weight: 700;
+  cursor: pointer; padding: 4px 0; transition: color 0.2s; position: relative;
+  color: ${p => p.$active ? '#a89ee8' : 'rgba(255,255,255,0.55)'};
+  &::after {
+    content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 2px;
+    background: #7c6fcd; border-radius: 2px;
+    opacity: ${p => p.$active ? 1 : 0}; transition: opacity 0.2s;
+  }
+  &:hover { color: white; }
 `;
 const ContentArea = styled.div` flex: 1; width: 100%; `;
 
