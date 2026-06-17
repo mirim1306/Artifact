@@ -275,16 +275,17 @@ app.get('/api/portfolios', optionalAuth, async (req, res) => {
       params.push(category);
       query += ` AND (p.category = $${params.length} OR (p.sub_categories IS NOT NULL AND p.sub_categories ILIKE '%' || $${params.length} || '%'))`;
     }
-    if (search) {
-      params.push(`%${search}%`);
-      query += ` AND (p.title ILIKE $${params.length} OR p.category ILIKE $${params.length} OR p.sub_categories ILIKE $${params.length} OR u.nickname ILIKE $${params.length})`;
+    if (search && search.trim()) {
+      params.push(`%${search.trim()}%`);
+      const si = params.length;
+      query += ` AND (p.title ILIKE $${si} OR p.category ILIKE $${si} OR u.nickname ILIKE $${si})`;
     }
 
     query += ' GROUP BY p.id, u.nickname';
 
-    if (search) {
-      // 검색 시: 제목 일치 우선, 그 다음 최신순
-      query += ` ORDER BY (CASE WHEN p.title ILIKE $${params.length} THEN 0 ELSE 1 END), p.created_at DESC`;
+    if (search && search.trim()) {
+      const si = params.length;
+      query += ` ORDER BY (CASE WHEN p.title ILIKE $${si} THEN 0 WHEN p.category ILIKE $${si} THEN 1 ELSE 2 END), p.created_at DESC`;
     } else if (sort === 'likes') {
       query += ' ORDER BY like_count DESC, p.created_at DESC';
     } else if (sort === 'views') {
