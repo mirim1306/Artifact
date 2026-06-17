@@ -277,7 +277,7 @@ app.get('/api/portfolios', optionalAuth, async (req, res) => {
     }
     if (search) {
       params.push(`%${search}%`);
-      query += ` AND (p.title ILIKE $${params.length} OR p.category ILIKE $${params.length} OR p.sub_categories ILIKE $${params.length} OR p.tech_environment ILIKE $${params.length} OR p.team_members ILIKE $${params.length} OR p.service_intro ILIKE $${params.length})`;
+      query += ` AND (p.title ILIKE $${params.length} OR p.category ILIKE $${params.length} OR p.sub_categories ILIKE $${params.length} OR u.nickname ILIKE $${params.length})`;
     }
 
     query += ' GROUP BY p.id, u.nickname';

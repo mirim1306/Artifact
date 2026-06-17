@@ -59,7 +59,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
   const [dislikeCount, setDislikeCount] = useState(0);
 
   // 댓글
-  const [comments, setComments] = useState<Comment[]>(project.comments || []);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
 
@@ -68,6 +68,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
   const [editingContent, setEditingContent] = useState('');
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyInput, setReplyInput] = useState('');
+  const [replyTargetNick, setReplyTargetNick] = useState<string | null>(null);
 
   const currentUserId = getCurrentUserId();
 
@@ -116,6 +117,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
       ));
       setReplyInput('');
       setReplyingTo(null);
+      setReplyTargetNick(null);
     }
   };
 
@@ -369,7 +371,11 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
                     👎 {c.dislike_count || 0}
                   </CommentReactionBtn>
                   {currentUserId && (
-                    <ReplyBtn onClick={() => { setReplyingTo(replyingTo === c.id ? null : c.id); setReplyInput(''); }}>
+                    <ReplyBtn onClick={() => {
+                      setReplyingTo(replyingTo === c.id ? null : c.id);
+                      setReplyTargetNick(null);
+                      setReplyInput('');
+                    }}>
                       💬 답글
                     </ReplyBtn>
                   )}
@@ -379,7 +385,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
                 {replyingTo === c.id && (
                   <ReplyInputRow>
                     <CommentInput
-                      placeholder="답글을 입력하세요..."
+                      placeholder={replyTargetNick ? `@${replyTargetNick}에게 답글...` : '답글을 입력하세요...'}
                       value={replyInput}
                       onChange={e => setReplyInput(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAddReply(c.id); } }}
@@ -421,7 +427,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
                         ) : (
                           <CommentContent>{r.content}</CommentContent>
                         )}
-                        {/* 대댓글 좋아요/싫어요 */}
+                        {/* 대댓글 좋아요/싫어요/답글 */}
                         <CommentReactionRow>
                           <CommentReactionBtn $active={!!r.user_liked} $color="#ff2d55" onClick={() => handleCommentLike(r.id, c.id)} disabled={!currentUserId}>
                             {r.user_liked ? '❤️' : '🤍'} {r.like_count || 0}
@@ -429,6 +435,22 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
                           <CommentReactionBtn $active={!!r.user_disliked} $color="#6c757d" onClick={() => handleCommentDislike(r.id, c.id)} disabled={!currentUserId}>
                             👎 {r.dislike_count || 0}
                           </CommentReactionBtn>
+                          {currentUserId && (
+                            <ReplyBtn onClick={() => {
+                              const isToggling = replyingTo === c.id && replyTargetNick === r.nickname;
+                              if (isToggling) {
+                                setReplyingTo(null);
+                                setReplyTargetNick(null);
+                                setReplyInput('');
+                              } else {
+                                setReplyingTo(c.id);
+                                setReplyTargetNick(r.nickname);
+                                setReplyInput(`@${r.nickname} `);
+                              }
+                            }}>
+                              💬 답글
+                            </ReplyBtn>
+                          )}
                         </CommentReactionRow>
                       </ReplyItem>
                     ))}

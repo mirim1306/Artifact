@@ -14,7 +14,7 @@ const SUB_CATEGORY_OPTIONS: Record<Category, string[]> = {
   '앱':     ['웹', '게임', '디자인', '기타'],
   '게임':   ['웹', '앱', '디자인', '기타'],
   '디자인': ['웹', '앱', '게임', '기타'],
-  '기타':   ['웹', '앱', '게임', '디자인'],
+  '기타':   ['웹', '앱', '게임', '디자인', '기타'],
 };
 
 const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
