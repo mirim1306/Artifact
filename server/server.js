@@ -271,11 +271,13 @@ app.get('/api/portfolios', optionalAuth, async (req, res) => {
     `;
     const params = [];
 
-    if (category && category !== '전체') {
+    const hasSearch = !!(search && search.trim());
+
+    if (category && category !== '전체' && !hasSearch) {
       params.push(category);
       query += ` AND (p.category = $${params.length} OR (p.sub_categories IS NOT NULL AND p.sub_categories ILIKE '%' || $${params.length} || '%'))`;
     }
-    if (search && search.trim()) {
+    if (hasSearch) {
       params.push(`%${search.trim()}%`);
       const si = params.length;
       query += ` AND (p.title ILIKE $${si} OR p.category ILIKE $${si} OR u.nickname ILIKE $${si})`;
@@ -283,7 +285,7 @@ app.get('/api/portfolios', optionalAuth, async (req, res) => {
 
     query += ' GROUP BY p.id, u.nickname';
 
-    if (search && search.trim()) {
+    if (hasSearch) {
       const si = params.length;
       query += ` ORDER BY (CASE WHEN p.title ILIKE $${si} THEN 0 WHEN p.category ILIKE $${si} THEN 1 ELSE 2 END), p.created_at DESC`;
     } else if (sort === 'likes') {
