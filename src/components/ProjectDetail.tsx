@@ -365,7 +365,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
                   <span className="nick">{c.nickname}</span>
                   <span className="date">{new Date(c.created_at).toLocaleDateString('ko-KR')}</span>
                   {currentUserId === c.user_id && (
-                    <>
+                    <CommentBtns>
                       {editingCommentId === c.id ? (
                         <>
                           <CommentActionBtn onClick={() => handleEditSave(c.id)}>저장</CommentActionBtn>
@@ -377,7 +377,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
                           <DeleteCommentBtn onClick={() => handleDeleteComment(c.id)}>삭제</DeleteCommentBtn>
                         </>
                       )}
-                    </>
+                    </CommentBtns>
                   )}
                 </CommentMeta>
 
@@ -432,7 +432,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
                           <span className="nick">↳ {r.nickname}</span>
                           <span className="date">{new Date(r.created_at).toLocaleDateString('ko-KR')}</span>
                           {currentUserId === r.user_id && (
-                            <>
+                            <CommentBtns>
                               {editingCommentId === r.id ? (
                                 <>
                                   <CommentActionBtn onClick={() => handleEditSave(r.id, c.id)}>저장</CommentActionBtn>
@@ -444,7 +444,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
                                   <DeleteCommentBtn onClick={() => handleDeleteComment(r.id, c.id)}>삭제</DeleteCommentBtn>
                                 </>
                               )}
-                            </>
+                            </CommentBtns>
                           )}
                         </CommentMeta>
                         {editingCommentId === r.id ? (
@@ -597,11 +597,12 @@ const CommentActionBtn = styled.button`
   background: none; border: none; color: rgba(180,180,255,0.6); font-size: 12px; cursor: pointer;
   &:hover { color: #bfbaf2; }
 `;
+const CommentBtns = styled.div` margin-left: auto; display: flex; gap: 4px; align-items: center; `;
 const DeleteCommentBtn = styled.button`
-  margin-left: auto; background: none; border: none; color: rgba(255,100,100,0.5); font-size: 12px; cursor: pointer;
+  background: none; border: none; color: rgba(255,100,100,0.5); font-size: 12px; cursor: pointer;
   &:hover { color: #ff6b6b; }
 `;
-const CommentContent = styled.p` font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.6; margin: 0; white-space: pre-line; `;
+const CommentContent = styled.p` font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.6; margin: 0; white-space: pre-line; text-align: left; `;
 const CommentEditInput = styled.textarea`
   width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #7c6fcd;
   background: rgba(255,255,255,0.08); color: white; font-size: 14px; resize: none;
