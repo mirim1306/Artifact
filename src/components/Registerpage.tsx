@@ -200,17 +200,17 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
             </Col>
             <Col>
               <Label>공개 여부</Label>
-              <Select name="is_public" value={form.is_public} onChange={handleChange}>
-                <option value="true">공개</option>
-                <option value="false">비공개</option>
-              </Select>
+              <ToggleGroup>
+                <ToggleBtn type="button" $active={form.is_public === 'true'} onClick={() => setForm({ ...form, is_public: 'true' })}>공개</ToggleBtn>
+                <ToggleBtn type="button" $active={form.is_public === 'false'} onClick={() => setForm({ ...form, is_public: 'false' })}>비공개</ToggleBtn>
+              </ToggleGroup>
             </Col>
             <Col>
               <Label>댓글 허용</Label>
-              <Select name="comments_enabled" value={form.comments_enabled} onChange={handleChange}>
-                <option value="true">허용</option>
-                <option value="false">비허용</option>
-              </Select>
+              <ToggleGroup>
+                <ToggleBtn type="button" $active={form.comments_enabled === 'true'} onClick={() => setForm({ ...form, comments_enabled: 'true' })}>허용</ToggleBtn>
+                <ToggleBtn type="button" $active={form.comments_enabled === 'false'} onClick={() => setForm({ ...form, comments_enabled: 'false' })}>비허용</ToggleBtn>
+              </ToggleGroup>
             </Col>
           </Row>
 
@@ -434,9 +434,19 @@ const Textarea = styled.textarea`
   &:focus { border-color: #7b2cbf; }
 `;
 const Select = styled.select`
-  padding: 11px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15);
+  padding: 11px 40px 11px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15);
   background: rgba(30,30,60,0.9); color: white; font-size: 14px; outline: none; cursor: pointer;
   &:focus { border-color: #7b2cbf; }
+`;
+const ToggleGroup = styled.div`
+  display: flex; border-radius: 10px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.15);
+`;
+const ToggleBtn = styled.button<{ $active: boolean }>`
+  flex: 1; padding: 11px 14px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s;
+  background: ${p => p.$active ? '#7c6fcd' : 'rgba(30,30,60,0.9)'};
+  color: ${p => p.$active ? 'white' : 'rgba(255,255,255,0.45)'};
+  &:hover { color: white; background: ${p => p.$active ? '#9187d8' : 'rgba(255,255,255,0.08)'}; }
 `;
 const ImageUploadBox = styled.div<{ $isDragging?: boolean }>`
   width: 100%; aspect-ratio: 16/9; border-radius: 14px;
