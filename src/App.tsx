@@ -419,7 +419,7 @@ const NavItem = styled.button<{ $active: boolean }>`
 const ContentArea = styled.div` flex: 1; width: 100%; `;
 
 /* ── 슬라이더 ── */
-const MainSliderSection = styled.section` width: 100%; padding: 0 60px; margin-bottom: 10px; `;
+const MainSliderSection = styled.section` width: 100%; padding: 0 60px; margin-top: 32px; margin-bottom: 10px; `;
 const SliderContainer = styled.div`
   position: relative; width: 100%; aspect-ratio: 16/6; border-radius: 24px; overflow: hidden;
   background: #111623;

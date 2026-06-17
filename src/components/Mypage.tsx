@@ -167,7 +167,7 @@ const Avatar = styled.div`
   border-radius: 50%;
 `;
 
-const ProfileInfo = styled.div` flex: 1; margin-left: 24px; `;
+const ProfileInfo = styled.div` flex: 1; margin-left: 24px; text-align: left; `;
 const Nickname = styled.h2` font-size: 24px; font-weight: 800; margin: 0 0 4px; `;
 const Username = styled.p` font-size: 15px; color: rgba(255,255,255,0.5); margin: 0 0 4px; `;
 const Email = styled.p` font-size: 14px; color: rgba(255,255,255,0.4); margin: 0; `;
