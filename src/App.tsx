@@ -489,15 +489,14 @@ const GridItem = styled.div`
 const LoadingText = styled.div` grid-column: 1/-1; text-align: center; padding: 100px; color: rgba(255,255,255,0.4); font-size: 16px; `;
 const EmptyText = styled.div` grid-column: 1/-1; text-align: center; padding: 100px; color: rgba(255,255,255,0.3); font-size: 16px; `;
 
-const SearchRow = styled.div` display: flex; gap: 12px; padding: 0 60px; margin-top: 20px; margin-bottom: 0; `;
+const SearchRow = styled.div` display: flex; gap: 10px; padding: 0 60px; margin-top: 20px; margin-bottom: 0; `;
 const SearchInput = styled.input`
-  flex: 1; padding: 14px 20px; border-radius: 50px; font-size: 15px;
-  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); color: white; outline: none;
-  &::placeholder { color: rgba(255,255,255,0.3); }
-  &:focus { border-color: #7c6fcd; }
+  flex: 1; padding: 15px 24px; border-radius: 50px; font-size: 15px;
+  background: #1c2035; border: none; color: white; outline: none;
+  &::placeholder { color: rgba(255,255,255,0.28); }
 `;
 const SearchBtn = styled.button`
-  padding: 14px 28px; border-radius: 50px; font-size: 15px; font-weight: 700;
+  padding: 15px 32px; border-radius: 50px; font-size: 15px; font-weight: 700; flex-shrink: 0;
   background: #7c6fcd; border: none; color: white; cursor: pointer;
   &:hover { background: #9187d8; }
 `;

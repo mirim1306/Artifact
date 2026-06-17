@@ -555,17 +555,16 @@ const ContentBlock = styled.div`
 const SectionLabel = styled.h3` font-size: 14px; color: #7c6fcd; letter-spacing: 3px; margin: 0; font-weight: 900; text-transform: uppercase; text-align: center; `;
 const DescriptionText = styled.p` max-width: 850px; font-size: 16px; color: rgba(255,255,255,0.85); line-height: 1.8; white-space: pre-line; margin: 0; text-align: center; `;
 const CommentSection = styled.div` border-top: 1px solid rgba(255,255,255,0.08); padding-top: 40px; padding-bottom: 80px; display: flex; flex-direction: column; gap: 24px; `;
-const CommentInputRow = styled.div` display: flex; gap: 12px; `;
+const CommentInputRow = styled.div` display: flex; gap: 10px; `;
 const CommentInput = styled.textarea`
-  flex: 1; padding: 14px 18px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.06); color: white; font-size: 14px; resize: none; height: 52px;
-  outline: none; font-family: inherit;
-  &::placeholder { color: rgba(255,255,255,0.3); }
-  &:focus { border-color: #7c6fcd; }
+  flex: 1; padding: 15px 24px; border-radius: 50px; border: none;
+  background: #1c2035; color: white; font-size: 14px; resize: none; height: 52px;
+  outline: none; font-family: inherit; line-height: 1.5;
+  &::placeholder { color: rgba(255,255,255,0.28); }
   &:disabled { opacity: 0.4; }
 `;
 const CommentSubmitBtn = styled.button`
-  padding: 0 28px; border-radius: 14px; border: none; background: #7c6fcd; color: white; font-size: 14px; font-weight: 700; cursor: pointer;
+  padding: 0 28px; border-radius: 50px; border: none; background: #7c6fcd; color: white; font-size: 14px; font-weight: 700; cursor: pointer; flex-shrink: 0;
   &:hover:not(:disabled) { background: #9187d8; } &:disabled { opacity: 0.4; cursor: not-allowed; }
 `;
 const DisabledComment = styled.p` text-align: center; color: rgba(255,255,255,0.3); padding: 30px 0; font-size: 14px; border: 1px dashed rgba(255,255,255,0.15); border-radius: 12px; `;
@@ -573,7 +572,7 @@ const ReplyBtn = styled.button`
   background: none; border: none; color: rgba(255,255,255,0.4); font-size: 12px; cursor: pointer; padding: 2px 8px;
   &:hover { color: #7c6fcd; }
 `;
-const ReplyInputRow = styled.div` display: flex; gap: 8px; margin-top: 10px; padding-left: 20px; `;
+const ReplyInputRow = styled.div` display: flex; gap: 10px; margin-top: 10px; padding-left: 20px; `;
 const ReplyList = styled.div` display: flex; flex-direction: column; gap: 10px; margin-top: 12px; padding-left: 20px; border-left: 2px solid rgba(124,111,205,0.3); `;
 const ReplyItem = styled.div`
   background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 16px;
