@@ -175,7 +175,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
           <SectionTitle>기본 정보</SectionTitle>
 
           <Row>
-            <Col>
+            <Col style={{ flex: 3 }}>
               <Label>카테고리 <Required>*</Required></Label>
               <Select name="category" value={form.category} onChange={e => {
                 const newCat = e.target.value as Category;
@@ -198,19 +198,23 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
                 />
               )}
             </Col>
-            <Col>
+            <Col style={{ flex: 1 }}>
               <Label>공개 여부</Label>
-              <ToggleGroup>
-                <ToggleBtn type="button" $active={form.is_public === 'true'} onClick={() => setForm({ ...form, is_public: 'true' })}>공개</ToggleBtn>
-                <ToggleBtn type="button" $active={form.is_public === 'false'} onClick={() => setForm({ ...form, is_public: 'false' })}>비공개</ToggleBtn>
-              </ToggleGroup>
+              <ToggleChip
+                type="button"
+                onClick={() => setForm({ ...form, is_public: form.is_public === 'true' ? 'false' : 'true' })}
+              >
+                {form.is_public === 'true' ? '공개' : '비공개'}
+              </ToggleChip>
             </Col>
-            <Col>
+            <Col style={{ flex: 1 }}>
               <Label>댓글 허용</Label>
-              <ToggleGroup>
-                <ToggleBtn type="button" $active={form.comments_enabled === 'true'} onClick={() => setForm({ ...form, comments_enabled: 'true' })}>허용</ToggleBtn>
-                <ToggleBtn type="button" $active={form.comments_enabled === 'false'} onClick={() => setForm({ ...form, comments_enabled: 'false' })}>비허용</ToggleBtn>
-              </ToggleGroup>
+              <ToggleChip
+                type="button"
+                onClick={() => setForm({ ...form, comments_enabled: form.comments_enabled === 'true' ? 'false' : 'true' })}
+              >
+                {form.comments_enabled === 'true' ? '허용' : '비허용'}
+              </ToggleChip>
             </Col>
           </Row>
 
@@ -438,15 +442,12 @@ const Select = styled.select`
   background: rgba(30,30,60,0.9); color: white; font-size: 14px; outline: none; cursor: pointer;
   &:focus { border-color: #7b2cbf; }
 `;
-const ToggleGroup = styled.div`
-  display: flex; border-radius: 10px; overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.15);
-`;
-const ToggleBtn = styled.button<{ $active: boolean }>`
-  flex: 1; padding: 11px 14px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s;
-  background: ${p => p.$active ? '#7c6fcd' : 'rgba(30,30,60,0.9)'};
-  color: ${p => p.$active ? 'white' : 'rgba(255,255,255,0.45)'};
-  &:hover { color: white; background: ${p => p.$active ? '#9187d8' : 'rgba(255,255,255,0.08)'}; }
+const ToggleChip = styled.button`
+  padding: 8px 20px; border-radius: 50px; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; align-self: flex-start;
+  border: 1px solid rgba(123,44,191,0.5);
+  background: rgba(123,44,191,0.3); color: white;
+  &:hover { background: rgba(123,44,191,0.5); }
 `;
 const ImageUploadBox = styled.div<{ $isDragging?: boolean }>`
   width: 100%; aspect-ratio: 16/9; border-radius: 14px;
