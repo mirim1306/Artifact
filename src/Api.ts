@@ -82,3 +82,9 @@ export const commentAPI = {
   dislike: (commentId: number) =>
     fetchAPI(`/api/comments/${commentId}/dislike`, { method: 'POST' }),
 };
+
+// ── 사용자 공개 프로필 API ──
+export const userAPI = {
+  getPublicProfile: (username: string) =>
+    fetchAPI(`/api/users/${encodeURIComponent(username)}/portfolios`),
+};

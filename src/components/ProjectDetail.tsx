@@ -36,7 +36,7 @@ interface Project {
   comments?: Comment[]; like_count?: number; view_count?: number; comments_enabled?: boolean;
 }
 
-interface ProjectDetailProps { project: Project; onBack: () => void; }
+interface ProjectDetailProps { project: Project; onBack: () => void; onViewUser?: (username: string) => void; }
 
 function buildCommentTree(flat: Comment[]): Comment[] {
   const map: Record<number, Comment> = {};
@@ -63,7 +63,7 @@ const getCurrentUserId = (): number | null => {
   return u ? JSON.parse(u).id : null;
 };
 
-const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
+const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack, onViewUser }) => {
   const [isRunLoading, setIsRunLoading] = useState(false);
   const [activeMedia, setActiveMedia] = useState<{ url: string; isVideo: boolean } | null>(null);
 
@@ -326,8 +326,14 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
             {project.main_features && <MetaItem><MetaLabel>주요 기능</MetaLabel><MetaValueBox>{project.main_features}</MetaValueBox></MetaItem>}
             {project.detail_desc && <MetaItem><MetaLabel>상세 설명</MetaLabel><MetaValueBox>{project.detail_desc}</MetaValueBox></MetaItem>}
             <UserDivider />
-            <MetaItem><MetaLabel>등록자</MetaLabel><MetaValue>{project.nickname || '이름 없음'}</MetaValue></MetaItem>
-            {project.username && <MetaItem><MetaLabel>사용자 ID</MetaLabel><MetaValue>@{project.username}</MetaValue></MetaItem>}
+            <MetaItem>
+              <MetaLabel>등록자</MetaLabel>
+              <MetaValue>
+                {project.username && onViewUser
+                  ? <AuthorLink onClick={() => onViewUser(project.username!)}>{project.nickname || '이름 없음'}</AuthorLink>
+                  : (project.nickname || '이름 없음')}
+              </MetaValue>
+            </MetaItem>
             {project.email && <MetaItem><MetaLabel>이메일</MetaLabel><MetaValue>{project.email}</MetaValue></MetaItem>}
           </MetaInfo>
         </InfoSide>
@@ -571,6 +577,10 @@ const MetaLabel = styled.span` font-size: 11px; color: #7c6fcd; font-weight: 700
 const MetaValue = styled.span` font-size: 14px; color: rgba(255,255,255,0.8); word-break: break-all; a { color: #a29bfe; text-decoration: none; &:hover { text-decoration: underline; } } `;
 const MetaValueBox = styled.span` font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.5; white-space: pre-line; word-break: break-all; `;
 const UserDivider = styled.div` margin: 8px 0; border-top: 1px dashed rgba(255,255,255,0.15); `;
+const AuthorLink = styled.span`
+  cursor: pointer; color: #a89ee8;
+  &:hover { color: white; text-decoration: underline; }
+`;
 const ImageSide = styled.div` flex: 1; max-width: 750px; display: flex; flex-direction: column; gap: 16px; `;
 const MainImageWrapper = styled.div` width: 100%; aspect-ratio: 16/10; background: rgba(255,255,255,0.05); border-radius: 30px; overflow: hidden; `;
 const ProjectImage = styled.img` width: 100%; height: 100%; object-fit: cover; `;

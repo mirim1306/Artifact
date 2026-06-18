@@ -6,6 +6,7 @@ import AuthPage from './components/Authpage';
 import RegisterPage from './components/Registerpage';
 import MyPage from './components/Mypage';
 import AdminPage from './components/AdminPage';
+import UserProfilePage from './components/UserProfilePage';
 import { portfolioAPI } from './Api';
 
 const GlobalStyle = createGlobalStyle`
@@ -66,6 +67,7 @@ const App = () => {
   const navTab: NavTab = location.pathname === '/register' ? 'register' : location.pathname === '/mypage' ? 'mypage' : location.pathname === '/admin' ? 'admin' : 'home';
   const isAuthPage = location.pathname === '/login';
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [viewingUser, setViewingUser] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
 
   const [portfolios, setPortfolios] = useState<Project[]>([]);
@@ -233,7 +235,26 @@ const App = () => {
   );
 
   const renderContent = () => {
-    if (selectedProject && location.pathname.startsWith('/portfolio/')) return <ProjectDetail project={selectedProject} onBack={() => { setSelectedProject(null); navigate('/'); }} />;
+    if (viewingUser) return (
+      <UserProfilePage
+        username={viewingUser}
+        onBack={() => { setViewingUser(null); navigate('/'); }}
+        onSelectPortfolio={async (portfolioId: number) => {
+          const res = await portfolioAPI.getOne(portfolioId);
+          if (res.success) setSelectedProject(res.portfolio);
+          navigate(`/portfolio/${portfolioId}`);
+          setViewingUser(null);
+        }}
+      />
+    );
+
+    if (selectedProject && location.pathname.startsWith('/portfolio/')) return (
+      <ProjectDetail
+        project={selectedProject}
+        onBack={() => { setSelectedProject(null); navigate('/'); }}
+        onViewUser={(username) => { setViewingUser(username); setSelectedProject(null); navigate('/'); }}
+      />
+    );
 
     if (navTab === 'register') {
       return (

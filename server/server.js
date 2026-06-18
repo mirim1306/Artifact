@@ -927,6 +927,32 @@ app.post('/api/comments/:id/dislike', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ success: false }); }
 });
 
+// ══════════════════════════════════════════════════════════════
+// 사용자 공개 프로필 API
+// ══════════════════════════════════════════════════════════════
+app.get('/api/users/:username/portfolios', async (req, res) => {
+  try {
+    const userResult = await pool.query(
+      'SELECT id, nickname, username FROM users WHERE username = $1',
+      [req.params.username]
+    );
+    if (!userResult.rows.length) return res.status(404).json({ success: false, message: '사용자를 찾을 수 없습니다.' });
+    const user = userResult.rows[0];
+    const portfolios = await pool.query(
+      `SELECT p.*, COUNT(DISTINCT l.id) AS like_count, COALESCE(p.view_count, 0) AS view_count
+       FROM portfolios p
+       LEFT JOIN portfolio_likes l ON l.portfolio_id = p.id
+       WHERE p.user_id = $1 AND p.is_public = true
+       GROUP BY p.id
+       ORDER BY p.created_at DESC`,
+      [user.id]
+    );
+    res.json({ success: true, user, portfolios: portfolios.rows });
+  } catch (err) {
+    res.status(500).json({ success: false });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`✅ 서버가 포트 ${PORT}에서 실행중입니다.`);
 });
