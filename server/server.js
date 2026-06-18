@@ -36,6 +36,7 @@ app.get('/api/sse/:channel', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
   // 클라이언트에게 3초 후 재연결 권장
   res.write('retry: 3000\n');
