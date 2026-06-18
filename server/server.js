@@ -22,10 +22,14 @@ app.use(express.json());
 // SSE (Server-Sent Events) 인프라
 // ══════════════════════════════════════════════════════════════
 const sseClients = new Map();
+let sseEventId = 0;
 
 function sseBroadcast(channel, event) {
   const clients = sseClients.get(channel);
-  if (clients) clients.forEach(r => r.write(`data: ${JSON.stringify(event)}\n\n`));
+  if (!clients || clients.size === 0) return;
+  sseEventId++;
+  const msg = `id: ${sseEventId}\ndata: ${JSON.stringify(event)}\n\n`;
+  clients.forEach(r => { try { r.write(msg); } catch {} });
 }
 
 app.get('/api/sse/:channel', (req, res) => {
@@ -33,13 +37,15 @@ app.get('/api/sse/:channel', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
-  res.write('data: {"type":"connected"}\n\n');
+  // 클라이언트에게 3초 후 재연결 권장
+  res.write('retry: 3000\n');
+  res.write(`id: ${sseEventId}\ndata: {"type":"connected"}\n\n`);
 
   const { channel } = req.params;
   if (!sseClients.has(channel)) sseClients.set(channel, new Set());
   sseClients.get(channel).add(res);
 
-  const heartbeat = setInterval(() => res.write(': ping\n\n'), 25000);
+  const heartbeat = setInterval(() => { try { res.write(': ping\n\n'); } catch {} }, 20000);
 
   req.on('close', () => {
     clearInterval(heartbeat);
@@ -633,7 +639,11 @@ app.post('/api/portfolios/:id/like', authMiddleware, async (req, res) => {
       'SELECT COUNT(*) FROM portfolio_likes WHERE portfolio_id = $1',
       [req.params.id]
     );
-    res.json({ success: true, liked: existing.rows.length === 0, like_count: parseInt(count.rows[0].count) });
+    const liked = existing.rows.length === 0;
+    const likeCount = parseInt(count.rows[0].count);
+    res.json({ success: true, liked, like_count: likeCount });
+    sseBroadcast(`portfolio-${req.params.id}`, { type: 'likes', liked, likeCount });
+    sseBroadcast('portfolios', { type: 'portfolios' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: '좋아요 처리 중 오류가 발생했습니다.' });
@@ -694,7 +704,7 @@ app.post('/api/portfolios/:id/comments', authMiddleware, async (req, res) => {
       WHERE c.id = $1
     `, [result.rows[0].id]);
     res.status(201).json({ success: true, comment: { ...comment.rows[0], replies: [] } });
-    sseBroadcast(`comments-${req.params.id}`, { type: 'comments' });
+    sseBroadcast(`portfolio-${req.params.id}`, { type: 'comments' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: '댓글 등록 오류.' });
@@ -711,7 +721,7 @@ app.delete('/api/comments/:id', authMiddleware, async (req, res) => {
     const portfolioId = check.rows[0].portfolio_id;
     await pool.query('DELETE FROM portfolio_comments WHERE id = $1', [req.params.id]);
     res.json({ success: true });
-    sseBroadcast(`comments-${portfolioId}`, { type: 'comments' });
+    sseBroadcast(`portfolio-${portfolioId}`, { type: 'comments' });
   } catch {
     res.status(500).json({ success: false, message: '댓글 삭제 오류.' });
   }
@@ -815,7 +825,7 @@ app.delete('/api/admin/comments/:id', adminMiddleware, async (req, res) => {
     const portfolioId = row.rows[0]?.portfolio_id;
     await pool.query('DELETE FROM portfolio_comments WHERE id = $1', [req.params.id]);
     res.json({ success: true, message: '댓글이 삭제되었습니다.' });
-    if (portfolioId) sseBroadcast(`comments-${portfolioId}`, { type: 'comments' });
+    if (portfolioId) sseBroadcast(`portfolio-${portfolioId}`, { type: 'comments' });
   } catch (err) {
     res.status(500).json({ success: false, message: '댓글 삭제 오류' });
   }
@@ -849,7 +859,12 @@ app.post('/api/portfolios/:id/dislike', authMiddleware, async (req, res) => {
     }
     const dislikeCount = await pool.query('SELECT COUNT(*) FROM portfolio_dislikes WHERE portfolio_id = $1', [req.params.id]);
     const likeCount = await pool.query('SELECT COUNT(*) FROM portfolio_likes WHERE portfolio_id = $1', [req.params.id]);
-    res.json({ success: true, disliked: existing.rows.length === 0, dislikeCount: parseInt(dislikeCount.rows[0].count), likeCount: parseInt(likeCount.rows[0].count) });
+    const disliked = existing.rows.length === 0;
+    const dc = parseInt(dislikeCount.rows[0].count);
+    const lc = parseInt(likeCount.rows[0].count);
+    res.json({ success: true, disliked, dislikeCount: dc, likeCount: lc });
+    sseBroadcast(`portfolio-${req.params.id}`, { type: 'likes', disliked, dislikeCount: dc, likeCount: lc });
+    sseBroadcast('portfolios', { type: 'portfolios' });
   } catch (err) { console.error(err); res.status(500).json({ success: false }); }
 });
 
@@ -867,7 +882,7 @@ app.put('/api/comments/:id', authMiddleware, async (req, res) => {
     const portfolioId = check.rows[0].portfolio_id;
     await pool.query('UPDATE portfolio_comments SET content = $1 WHERE id = $2', [content.trim(), req.params.id]);
     res.json({ success: true });
-    sseBroadcast(`comments-${portfolioId}`, { type: 'comments' });
+    sseBroadcast(`portfolio-${portfolioId}`, { type: 'comments' });
   } catch (err) { res.status(500).json({ success: false }); }
 });
 
@@ -889,7 +904,7 @@ app.post('/api/comments/:id/like', authMiddleware, async (req, res) => {
     const likes = await pool.query('SELECT COUNT(*) FROM comment_likes WHERE comment_id = $1', [req.params.id]);
     const dislikes = await pool.query('SELECT COUNT(*) FROM comment_dislikes WHERE comment_id = $1', [req.params.id]);
     res.json({ success: true, liked: existing.rows.length === 0, likeCount: parseInt(likes.rows[0].count), dislikeCount: parseInt(dislikes.rows[0].count) });
-    if (portfolioId) sseBroadcast(`comments-${portfolioId}`, { type: 'comments' });
+    if (portfolioId) sseBroadcast(`portfolio-${portfolioId}`, { type: 'comments' });
   } catch (err) { res.status(500).json({ success: false }); }
 });
 
@@ -907,7 +922,7 @@ app.post('/api/comments/:id/dislike', authMiddleware, async (req, res) => {
     const dislikes = await pool.query('SELECT COUNT(*) FROM comment_dislikes WHERE comment_id = $1', [req.params.id]);
     const likes = await pool.query('SELECT COUNT(*) FROM comment_likes WHERE comment_id = $1', [req.params.id]);
     res.json({ success: true, disliked: existing.rows.length === 0, dislikeCount: parseInt(dislikes.rows[0].count), likeCount: parseInt(likes.rows[0].count) });
-    if (portfolioId) sseBroadcast(`comments-${portfolioId}`, { type: 'comments' });
+    if (portfolioId) sseBroadcast(`portfolio-${portfolioId}`, { type: 'comments' });
   } catch (err) { res.status(500).json({ success: false }); }
 });
 

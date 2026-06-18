@@ -93,27 +93,74 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
     });
   }, [project.id]);
 
-  useEffect(() => {
+  const fetchLikes = useCallback(() => {
     likeAPI.getStatus(project.id).then(res => {
       if (res.success) { setLiked(res.liked); setLikeCount(res.count); }
     });
     likeAPI.getDislikeStatus(project.id).then(res => {
       if (res.success) { setDisliked(res.disliked); setDislikeCount(res.count); }
     });
+  }, [project.id]);
+
+  useEffect(() => {
+    fetchLikes();
     fetchComments();
 
-    const es = new EventSource(`/api/sse/comments-${project.id}`);
-    es.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (data.type === 'comments') fetchComments();
-      } catch {}
-    };
-    // SSE 연결 실패 시 폴백 폴링
-    const fallback = setInterval(fetchComments, 60000);
+    let es: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectDelay = 1000;
+    let commentDebounce: ReturnType<typeof setTimeout> | null = null;
+    let likesDebounce: ReturnType<typeof setTimeout> | null = null;
 
-    return () => { es.close(); clearInterval(fallback); };
-  }, [project.id, fetchComments]);
+    const debouncedFetchComments = () => {
+      if (commentDebounce) clearTimeout(commentDebounce);
+      commentDebounce = setTimeout(fetchComments, 300);
+    };
+    const debouncedFetchLikes = () => {
+      if (likesDebounce) clearTimeout(likesDebounce);
+      likesDebounce = setTimeout(fetchLikes, 300);
+    };
+
+    const connect = () => {
+      es = new EventSource(`/api/sse/portfolio-${project.id}`);
+      es.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === 'comments') debouncedFetchComments();
+          else if (data.type === 'likes') debouncedFetchLikes();
+        } catch {}
+        reconnectDelay = 1000;
+      };
+      es.onerror = () => {
+        es?.close();
+        reconnectTimer = setTimeout(connect, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+      };
+    };
+
+    connect();
+
+    // 탭 복귀 시 즉시 갱신
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchComments();
+        fetchLikes();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // SSE 장애 시 폴백 폴링 (60초)
+    const fallback = setInterval(() => { fetchComments(); fetchLikes(); }, 60000);
+
+    return () => {
+      es?.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (commentDebounce) clearTimeout(commentDebounce);
+      if (likesDebounce) clearTimeout(likesDebounce);
+      clearInterval(fallback);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [project.id, fetchComments, fetchLikes]);
 
   const handleLike = async () => {
     if (!currentUserId) return;

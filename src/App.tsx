@@ -123,17 +123,52 @@ const App = () => {
   useEffect(() => {
     if (navTab !== 'home' || selectedProject) return;
 
-    const es = new EventSource('/api/sse/portfolios');
-    es.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (data.type === 'portfolios') fetchPortfolios(tab, sort, activeSearch);
-      } catch {}
+    let es: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectDelay = 1000;
+    let debounce: ReturnType<typeof setTimeout> | null = null;
+
+    const debouncedFetch = () => {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(() => fetchPortfolios(tab, sort, activeSearch), 300);
     };
-    // SSE 연결 실패 시 폴백 폴링
+
+    const connect = () => {
+      es = new EventSource('/api/sse/portfolios');
+      es.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === 'portfolios') debouncedFetch();
+        } catch {}
+        reconnectDelay = 1000;
+      };
+      es.onerror = () => {
+        es?.close();
+        reconnectTimer = setTimeout(connect, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+      };
+    };
+
+    connect();
+
+    // 탭 복귀 시 즉시 갱신
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchPortfolios(tab, sort, activeSearch);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // SSE 장애 시 폴백 폴링 (60초)
     const fallback = setInterval(() => fetchPortfolios(tab, sort, activeSearch), 60000);
 
-    return () => { es.close(); clearInterval(fallback); };
+    return () => {
+      es?.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (debounce) clearTimeout(debounce);
+      clearInterval(fallback);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [navTab, tab, sort, activeSearch, selectedProject, fetchPortfolios]);
 
   // URL이 /portfolio/가 아니면 selectedProject 초기화
