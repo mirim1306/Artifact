@@ -76,68 +76,85 @@ const AdminPage: React.FC<AdminPageProps> = ({ onBack }) => {
         <>
           {/* 유저 목록 */}
           {tab === 'users' && (
-            <Table>
-              <thead>
-                <tr><Th>닉네임</Th><Th>ID</Th><Th>이메일</Th><Th>가입일</Th><Th>관리자</Th><Th>삭제</Th></tr>
-              </thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u.id}>
-                    <Td>{u.nickname}</Td>
-                    <Td>@{u.username}</Td>
-                    <Td>{u.email}</Td>
-                    <Td>{new Date(u.created_at).toLocaleDateString('ko-KR')}</Td>
-                    <Td>{u.is_admin ? '✅' : ''}</Td>
-                    <Td>
-                      {!u.is_admin && (
-                        <DeleteBtn onClick={() => deleteUser(u.id)}>탈퇴</DeleteBtn>
-                      )}
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+            <TableWrap>
+              <Table>
+                <colgroup>
+                  <col style={{ width: '14%' }} /><col style={{ width: '14%' }} />
+                  <col style={{ width: '28%' }} /><col style={{ width: '20%' }} />
+                  <col style={{ width: '12%' }} /><col style={{ width: '12%' }} />
+                </colgroup>
+                <thead>
+                  <tr><Th>닉네임</Th><Th>ID</Th><Th>이메일</Th><Th>가입일</Th><Th>관리자</Th><Th>삭제</Th></tr>
+                </thead>
+                <tbody>
+                  {users.map(u => (
+                    <tr key={u.id}>
+                      <Td>{u.nickname}</Td>
+                      <Td>@{u.username}</Td>
+                      <Td>{u.email}</Td>
+                      <Td>{new Date(u.created_at).toLocaleDateString('ko-KR')}</Td>
+                      <Td>{u.is_admin ? '✅' : ''}</Td>
+                      <Td>{!u.is_admin && <DeleteBtn onClick={() => deleteUser(u.id)}>탈퇴</DeleteBtn>}</Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </TableWrap>
           )}
 
           {/* 포트폴리오 목록 */}
           {tab === 'portfolios' && (
-            <Table>
-              <thead>
-                <tr><Th>제목</Th><Th>카테고리</Th><Th>등록자</Th><Th>공개</Th><Th>등록일</Th><Th>삭제</Th></tr>
-              </thead>
-              <tbody>
-                {portfolios.map(p => (
-                  <tr key={p.id}>
-                    <Td>{p.title}</Td>
-                    <Td>{p.category}</Td>
-                    <Td>{p.nickname}</Td>
-                    <Td>{p.is_public ? '공개' : '비공개'}</Td>
-                    <Td>{new Date(p.created_at).toLocaleDateString('ko-KR')}</Td>
-                    <Td><DeleteBtn onClick={() => deletePortfolio(p.id)}>삭제</DeleteBtn></Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+            <TableWrap>
+              <Table>
+                <colgroup>
+                  <col style={{ width: '30%' }} /><col style={{ width: '12%' }} />
+                  <col style={{ width: '16%' }} /><col style={{ width: '12%' }} />
+                  <col style={{ width: '18%' }} /><col style={{ width: '12%' }} />
+                </colgroup>
+                <thead>
+                  <tr><Th>제목</Th><Th>카테고리</Th><Th>등록자</Th><Th>공개</Th><Th>등록일</Th><Th>삭제</Th></tr>
+                </thead>
+                <tbody>
+                  {portfolios.map(p => (
+                    <tr key={p.id}>
+                      <Td>{p.title}</Td>
+                      <Td>{p.category}</Td>
+                      <Td>{p.nickname}</Td>
+                      <Td>{p.is_public ? '공개' : '비공개'}</Td>
+                      <Td>{new Date(p.created_at).toLocaleDateString('ko-KR')}</Td>
+                      <Td><DeleteBtn onClick={() => deletePortfolio(p.id)}>삭제</DeleteBtn></Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </TableWrap>
           )}
 
           {/* 댓글 목록 */}
           {tab === 'comments' && (
-            <Table>
-              <thead>
-                <tr><Th>내용</Th><Th>작성자</Th><Th>포트폴리오</Th><Th>작성일</Th><Th>삭제</Th></tr>
-              </thead>
-              <tbody>
-                {comments.map(c => (
-                  <tr key={c.id}>
-                    <Td style={{ maxWidth: '300px' }}>{c.content}</Td>
-                    <Td>{c.nickname}</Td>
-                    <Td>{c.portfolio_title}</Td>
-                    <Td>{new Date(c.created_at).toLocaleDateString('ko-KR')}</Td>
-                    <Td><DeleteBtn onClick={() => deleteComment(c.id)}>삭제</DeleteBtn></Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+            <TableWrap>
+              <Table>
+                <colgroup>
+                  <col style={{ width: '35%' }} /><col style={{ width: '15%' }} />
+                  <col style={{ width: '25%' }} /><col style={{ width: '15%' }} />
+                  <col style={{ width: '10%' }} />
+                </colgroup>
+                <thead>
+                  <tr><Th>내용</Th><Th>작성자</Th><Th>포트폴리오</Th><Th>작성일</Th><Th>삭제</Th></tr>
+                </thead>
+                <tbody>
+                  {comments.map(c => (
+                    <tr key={c.id}>
+                      <Td>{c.content}</Td>
+                      <Td>{c.nickname}</Td>
+                      <Td>{c.portfolio_title}</Td>
+                      <Td>{new Date(c.created_at).toLocaleDateString('ko-KR')}</Td>
+                      <Td><DeleteBtn onClick={() => deleteComment(c.id)}>삭제</DeleteBtn></Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </TableWrap>
           )}
         </>
       )}
@@ -159,15 +176,23 @@ const TabBtn = styled.button<{ $active: boolean }>`
   color: ${p => p.$active ? 'white' : 'rgba(255,255,255,0.5)'};
   &:hover { background: ${p => p.$active ? '#7c6fcd' : 'rgba(255,255,255,0.12)'}; color: white; }
 `;
-const Table = styled.table`
-  width: 100%; border-collapse: collapse;
-  background: rgba(255,255,255,0.04); border-radius: 16px; overflow: hidden;
+const TableWrap = styled.div`
+  border-radius: 16px; overflow: hidden;
+  background: rgba(255,255,255,0.04);
 `;
-const Th = styled.th` padding: 14px 16px; text-align: left; font-size: 12px; font-weight: 700; color: #7c6fcd; border-bottom: 1px solid rgba(255,255,255,0.08); `;
+const Table = styled.table`
+  width: 100%; border-collapse: collapse; table-layout: fixed;
+`;
+const Th = styled.th`
+  padding: 14px 16px; text-align: left; vertical-align: middle;
+  font-size: 12px; font-weight: 700; color: #7c6fcd;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+`;
 const Td = styled.td`
-  padding: 12px 16px; font-size: 13px; color: rgba(255,255,255,0.8);
+  padding: 12px 16px; text-align: left; vertical-align: middle;
+  font-size: 13px; color: rgba(255,255,255,0.8);
   border-bottom: 1px solid rgba(255,255,255,0.05);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 `;
 const DeleteBtn = styled.button`
   padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255,100,100,0.4);
