@@ -356,7 +356,7 @@ const App = () => {
               {user ? (
                 <>
                   <NicknameText>👋 {user.nickname}</NicknameText>
-                  {user.is_admin && <HeaderButton $outline onClick={() => navigate('/admin')}>관리자</HeaderButton>}
+                  {user.is_admin && <HeaderButton $outline onClick={() => navigate('/admin')}>관리 페이지</HeaderButton>}
                   <HeaderButton $outline onClick={handleLogout}>로그아웃</HeaderButton>
                 </>
               ) : (

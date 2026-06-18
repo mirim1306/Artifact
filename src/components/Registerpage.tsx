@@ -443,8 +443,8 @@ const Select = styled.select`
   &:focus { border-color: #7b2cbf; }
 `;
 const ToggleChip = styled.button`
-  padding: 8px 20px; border-radius: 50px; font-size: 13px; font-weight: 700;
-  cursor: pointer; transition: all 0.2s; align-self: flex-start;
+  padding: 11px 20px; border-radius: 50px; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s; width: 100%;
   border: 1px solid rgba(123,44,191,0.5);
   background: rgba(123,44,191,0.3); color: white;
   &:hover { background: rgba(123,44,191,0.5); }
