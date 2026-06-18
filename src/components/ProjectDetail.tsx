@@ -256,7 +256,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
     }
   };
 
-  const getUrl = () => project.run_link || project.file_link || project.store_link || null;
+  const getUrl = () => project.run_link || project.file_link || project.store_link || project.design_link || null;
   const handleRunService = () => {
     if (isRunLoading) return;
     const url = getUrl();
@@ -322,17 +322,6 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack }) => {
             {project.team_members && <MetaItem><MetaLabel>팀원</MetaLabel><MetaValue>{project.team_members}</MetaValue></MetaItem>}
             {project.tech_environment && <MetaItem><MetaLabel>기술 스택 / 환경</MetaLabel><MetaValue>{project.tech_environment}</MetaValue></MetaItem>}
             {project.design_tool && <MetaItem><MetaLabel>사용 디자인 툴</MetaLabel><MetaValue>{project.design_tool}</MetaValue></MetaItem>}
-            {project.category === '웹' && project.run_link && <MetaItem><MetaLabel>웹 실행 URL</MetaLabel><MetaValue><a href={project.run_link} target="_blank" rel="noreferrer">{project.run_link}</a></MetaValue></MetaItem>}
-            {project.category === '앱' && project.store_link && <MetaItem><MetaLabel>스토어 링크</MetaLabel><MetaValue><a href={project.store_link} target="_blank" rel="noreferrer">{project.store_link}</a></MetaValue></MetaItem>}
-            {project.category === '게임' && (
-              <>
-                {project.file_link && <MetaItem><MetaLabel>실행 파일 다운로드</MetaLabel><MetaValue><a href={project.file_link}>{project.file_link}</a></MetaValue></MetaItem>}
-                {project.run_link && <MetaItem><MetaLabel>웹 게임 링크</MetaLabel><MetaValue><a href={project.run_link} target="_blank" rel="noreferrer">{project.run_link}</a></MetaValue></MetaItem>}
-              </>
-            )}
-            {project.category === '디자인' && project.design_link && (
-              <MetaItem><MetaLabel>디자인 링크</MetaLabel><MetaValue><a href={project.design_link} target="_blank" rel="noreferrer">{project.design_link}</a></MetaValue></MetaItem>
-            )}
             {project.github_link && <MetaItem><MetaLabel>GitHub</MetaLabel><MetaValue><a href={project.github_link} target="_blank" rel="noreferrer">{project.github_link}</a></MetaValue></MetaItem>}
             {project.main_features && <MetaItem><MetaLabel>주요 기능</MetaLabel><MetaValueBox>{project.main_features}</MetaValueBox></MetaItem>}
             {project.detail_desc && <MetaItem><MetaLabel>상세 설명</MetaLabel><MetaValueBox>{project.detail_desc}</MetaValueBox></MetaItem>}
