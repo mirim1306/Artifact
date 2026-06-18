@@ -125,8 +125,12 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!form.title || !form.category) {
-      setError('제목과 카테고리는 필수입니다.');
+    if (!form.title) {
+      setError('제목은 필수입니다.');
+      return;
+    }
+    if (!mainImageFile && !mainImagePreview) {
+      setError('메인 이미지는 필수입니다.');
       return;
     }
     setLoading(true);
@@ -176,7 +180,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
 
           <Row>
             <Col style={{ flex: 3 }}>
-              <Label>카테고리 <Required>*</Required></Label>
+              <Label>카테고리</Label>
               <Select name="category" value={form.category} onChange={e => {
                 const newCat = e.target.value as Category;
                 const newOpts = (SUB_CATEGORY_OPTIONS[newCat] ?? []).filter(o => o !== '기타');
@@ -253,7 +257,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onSuccess, editData }) => {
             </CustomSubRow>
           ))}
 
-          <Label>메인 이미지</Label>
+          <Label>메인 이미지 <Required>*</Required></Label>
           <ImageUploadBox
             onClick={() => document.getElementById('mainImageInput')?.click()}
             $isDragging={isDragging}
