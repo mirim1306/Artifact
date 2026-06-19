@@ -278,7 +278,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack, onViewUs
     }
 
     setTimeout(() => {
-      const isDownload = url.includes('/releases/download/');
+      const isDownload = url.includes('/releases/download/') || /\.(exe|zip|msi|dmg|pkg|apk)$/i.test(url);
       if (isDownload) {
         const a = document.createElement('a'); a.href = url; a.download = '';
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
