@@ -265,7 +265,12 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack, onViewUs
 
     // 커스텀 URL 스킴 (algaki://, chesscardgame://, rainbowholdem://)
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      window.location.href = url;
+      const a = document.createElement('a');
+      a.href = url;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
       setTimeout(() => setIsRunLoading(false), 1500);
       return;
     }
