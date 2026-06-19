@@ -276,7 +276,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack, onViewUs
     }
 
     // localhost 런처 서버 감지: http://localhost:7777/launch?game=xxx
-    if (url.startsWith('http://localhost:7777/')) {
+    if (url.startsWith('http://localhost:17777/')) {
       const img = new Image();
       img.src = url;
       setTimeout(() => setIsRunLoading(false), 1500);
