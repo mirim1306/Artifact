@@ -277,14 +277,8 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack, onViewUs
 
     // localhost 런처 서버 감지: http://localhost:7777/launch?game=xxx
     if (url.startsWith('http://localhost:7777/')) {
-      try {
-        const res = await fetch(url);
-        const data = await res.json();
-        if (!data.success) throw new Error();
-      } catch {
-        alert('게임 런처 서버가 실행되지 않았습니다.\n게임런처시작.bat 파일을 먼저 실행해주세요.');
-      }
-      setIsRunLoading(false);
+      fetch(url, { mode: 'no-cors' }).catch(() => {});
+      setTimeout(() => setIsRunLoading(false), 1500);
       return;
     }
 
