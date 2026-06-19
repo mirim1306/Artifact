@@ -257,11 +257,26 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onBack, onViewUs
   };
 
   const getUrl = () => project.run_link || project.file_link || project.store_link || project.design_link || null;
-  const handleRunService = () => {
+  const handleRunService = async () => {
     if (isRunLoading) return;
     const url = getUrl();
     if (!url) return;
     setIsRunLoading(true);
+
+    // localhost 런처 서버 감지: http://localhost:7777/launch?game=xxx
+    if (url.startsWith('http://localhost:7777/')) {
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!data.success) throw new Error();
+      } catch {
+        // 서버가 꺼져 있으면 안내
+        alert('게임 런처 서버가 실행되지 않았습니다.\n게임런처시작.bat 파일을 먼저 실행해주세요.');
+      }
+      setIsRunLoading(false);
+      return;
+    }
+
     setTimeout(() => {
       const isDownload = url.includes('/releases/download/');
       if (isDownload) {
